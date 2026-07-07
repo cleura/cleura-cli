@@ -1,0 +1,49 @@
+# Example GitHub Actions workflow authenticating with the cleura CLI.
+#
+# Repository configuration (Settings > Secrets and variables > Actions):
+#   variables: CLEURA_USERNAME, CLEURA_PROJECT_ID
+#   secrets:   CLEURA_API_PASSWORD
+#              GH_READ_TOKEN (only while the cleura repos are private: a
+#              fine-grained PAT with read access to cleura/cleura-cli and
+#              cleura/cleura-client-go, for `go install`)
+
+name: cleura-example
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleura:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      # Once binary releases exist, replace this step with a download from
+      # GitHub Releases (or a setup action).
+      - name: Install cleura
+        env:
+          GOPRIVATE: github.com/cleura/*
+          GH_TOKEN: ${{ secrets.GH_READ_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+          go install github.com/cleura/cleura-cli/cmd/cleura@latest
+
+      - name: Log in to Cleura
+        env:
+          CLEURA_API_PASSWORD: ${{ secrets.CLEURA_API_PASSWORD }}
+        run: >
+          cleura login -u "${{ vars.CLEURA_USERNAME }}"
+          --profile ci --cloud public --region sto1
+          --project-id "${{ vars.CLEURA_PROJECT_ID }}"
+
+      - name: Use the CLI
+        run: |
+          cleura whoami
+          cleura gardener shoot list
+
+      # Revoke the job's token even when earlier steps fail.
+      - name: Log out
+        if: always()
+        run: cleura logout --profile ci -q

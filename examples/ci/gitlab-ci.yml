@@ -1,0 +1,30 @@
+# Example GitLab CI job authenticating with the cleura CLI.
+#
+# CI/CD variables (Settings > CI/CD > Variables):
+#   CLEURA_USERNAME       (protected)
+#   CLEURA_API_PASSWORD   (protected + masked) — read by `cleura login`
+#   CLEURA_PROJECT_ID     (protected)
+#
+# The image below builds the CLI from source while the repos are private and
+# unreleased; once binary releases exist, replace the install lines with a
+# download of the released artifact.
+
+cleura-example:
+  stage: deploy
+  image: golang:1.25
+  variables:
+    GOPRIVATE: github.com/cleura/*
+  before_script:
+    # Only while the cleura repos are private: credentials for `go install`.
+    # $GH_READ_TOKEN is a GitHub PAT with read access to both cleura repos.
+    - git config --global url."https://x-access-token:${GH_READ_TOKEN}@github.com/".insteadOf "https://github.com/"
+    - go install github.com/cleura/cleura-cli/cmd/cleura@latest
+    - export PATH="$PATH:$(go env GOPATH)/bin"
+    # CLEURA_API_PASSWORD is picked up from the environment — no prompt, no pipe.
+    - cleura login -u "$CLEURA_USERNAME" --profile ci --cloud public --region sto1 --project-id "$CLEURA_PROJECT_ID"
+  script:
+    - cleura whoami
+    - cleura gardener shoot list
+  after_script:
+    # Runs on success and failure: revoke the job's token.
+    - cleura logout --profile ci -q

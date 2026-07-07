@@ -50,6 +50,9 @@ and a pre-created token can be stored with
 Note that API tokens expire, so CI jobs should log in per run rather than reuse a
 stored token.
 
+Ready-to-copy pipeline examples (GitHub Actions, GitLab CI, plain shell) live in
+[`examples/ci/`](examples/ci/).
+
 ## Configuration
 
 Settings are resolved with the precedence **flags > environment > profile > defaults**.
