@@ -1,0 +1,7 @@
+/cleura
+__debug*
+*.env
+.DS_Store
+go.work
+go.work.sum
+.agent
