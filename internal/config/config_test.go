@@ -200,6 +200,16 @@ func TestResolveEndpoint(t *testing.T) {
 	}
 	t.Setenv("CLEURA_CLOUD", "")
 
+	// A live, unpaired env URL serves an explicitly selected cloud — the
+	// user is overriding the endpoint right now — and outranks the
+	// profile's stored pairing.
+	t.Setenv("CLEURA_API_URL", "https://new.acme.example")
+	s = cfg.Resolve(Flags{Profile: "private", Cloud: "acme"})
+	if s.APIURL != "https://new.acme.example" {
+		t.Errorf("env URL should outrank the profile's paired api_url: %+v", s)
+	}
+	t.Setenv("CLEURA_API_URL", "")
+
 	// An explicit --cloud flag must beat a stored api_url.
 	s = cfg.Resolve(Flags{Profile: "acme", Cloud: "public"})
 	if s.Cloud != "public" || s.APIURL != "" {

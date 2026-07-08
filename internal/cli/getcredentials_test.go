@@ -87,6 +87,27 @@ func TestGetCredentialsNoToken(t *testing.T) {
 	}
 }
 
+func TestGetCredentialsUnresolvableEndpointFallsThrough(t *testing.T) {
+	// A profile whose endpoint cannot resolve (unknown cloud, no api_url)
+	// cannot yield usable credentials: exit 2 for chain callers, not a
+	// malfunction that would abort their credential chain.
+	out, err := runCLI(t, `profiles:
+  default:
+    cloud: acme
+    username: u
+    token: tok
+`, "config", "get-credentials")
+
+	var coded *ExitCodeError
+	if !errors.As(err, &coded) || coded.Code != 2 {
+		t.Fatalf("want ExitCodeError code 2, got %v", err)
+	}
+	var payload map[string]string
+	if jsonErr := json.Unmarshal([]byte(out), &payload); jsonErr != nil || payload["error"] == "" {
+		t.Errorf("stdout should carry a JSON error object, got: %s", out)
+	}
+}
+
 func TestGetCredentialsOmitsUnsetOptionalFields(t *testing.T) {
 	out, err := runCLI(t, `profiles:
   default:

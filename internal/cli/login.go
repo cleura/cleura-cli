@@ -90,8 +90,16 @@ token with --token-stdin (validated before storing).`,
 			// storage time is the only basis for staleness diagnostics.
 			profile.TokenStoredAt = time.Now().UTC().Truncate(time.Second)
 			// Record the endpoint the token was created against, however it
-			// was selected, so later commands reach the same API.
-			profile.Cloud = settings.Cloud
+			// was selected, so later commands reach the same API. A cloud
+			// that was only the built-in default must not be stored next to
+			// an explicit endpoint override: {api_url}-only profiles keep
+			// cloud unset, so a later --cloud public is never paired with
+			// the private URL.
+			if settings.APIURL != "" && settings.Sources.Cloud == "default" {
+				profile.Cloud = ""
+			} else {
+				profile.Cloud = settings.Cloud
+			}
 			profile.APIURL = settings.APIURL
 			// Convenience context worth remembering, but never blank stored
 			// values on a plain re-login.

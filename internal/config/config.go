@@ -272,10 +272,18 @@ func (s *Settings) resolveEndpoint(flags Flags, profile *Profile) {
 	)
 	s.Sources.Endpoint = s.Sources.Cloud
 
-	endpointSources := []struct{ url, urlSource, cloud string }{
-		{flags.APIURL, "--api-url", flags.Cloud},
-		{os.Getenv("CLEURA_API_URL"), "$CLEURA_API_URL", os.Getenv("CLEURA_CLOUD")},
-		{profile.APIURL, "profile", profile.Cloud},
+	// looseMatch marks the live sources (flags, env): their unpaired URL may
+	// serve any selected cloud — the user is actively overriding the endpoint
+	// right now. The profile's stored URL only applies to its own stored
+	// cloud, so an explicit --cloud selection is never hijacked by passive
+	// state (the original footgun).
+	endpointSources := []struct {
+		url, urlSource, cloud string
+		looseMatch            bool
+	}{
+		{flags.APIURL, "--api-url", flags.Cloud, true},
+		{os.Getenv("CLEURA_API_URL"), "$CLEURA_API_URL", os.Getenv("CLEURA_CLOUD"), true},
+		{profile.APIURL, "profile", profile.Cloud, false},
 	}
 	for i, src := range endpointSources {
 		if src.url != "" {
@@ -285,9 +293,9 @@ func (s *Settings) resolveEndpoint(flags Flags, profile *Profile) {
 		}
 		if src.cloud != "" {
 			// This source's named cloud determines the endpoint. A lower
-			// source whose URL is paired with the same cloud name provides it.
+			// source may still provide the URL for it.
 			for _, lower := range endpointSources[i+1:] {
-				if lower.url != "" && lower.cloud == src.cloud {
+				if lower.url != "" && (lower.cloud == src.cloud || (lower.looseMatch && lower.cloud == "")) {
 					s.APIURL, s.Sources.APIURL = lower.url, lower.urlSource
 					s.Sources.Endpoint = lower.urlSource
 					return

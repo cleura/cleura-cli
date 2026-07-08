@@ -80,9 +80,21 @@ a breaking change bumps it. Consumers must check the version field.`,
 			if settings.Username == "" {
 				return noCredentials("no credentials: a token is set but no username; the API requires both")
 			}
+			// An unresolvable endpoint means this profile selection cannot
+			// yield usable credentials — the fall-through case for chain
+			// callers, not a malfunction.
 			endpoint, err := settings.ResolveURL()
 			if err != nil {
-				return err
+				return noCredentials("no credentials: %v", err)
+			}
+
+			// Credentials resolved from different sources may not authenticate
+			// as a pair; say so where a human can see it (stderr).
+			if settings.Sources.Username != settings.Sources.Token {
+				fmt.Fprintf(cmd.ErrOrStderr(), "warning: the username comes from %s but the token from %s — the pair may not authenticate together\n", settings.Sources.Username, settings.Sources.Token)
+			}
+			if settings.Sources.Token == "profile" && settings.Sources.Endpoint != "profile" && settings.Sources.Endpoint != "default" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "warning: the endpoint comes from %s but the token was stored in the profile — the token may belong to a different endpoint\n", settings.Sources.Endpoint)
 			}
 
 			if validate {
@@ -94,8 +106,15 @@ a breaking change bumps it. Consumers must check the version field.`,
 				if err != nil {
 					return fmt.Errorf("validating token: %w", err)
 				}
-				if resp.StatusCode() != 204 {
+				switch resp.StatusCode() {
+				case 204:
+					// valid
+				case 401, 403:
 					return noCredentials("no credentials: the token was rejected by the API (%s); run 'cleura login'", resp.Status())
+				default:
+					// A 5xx/proxy error says nothing about the credentials;
+					// treat it as a malfunction, not as "no credentials".
+					return fmt.Errorf("validating token: unexpected response %s", resp.Status())
 				}
 			}
 
