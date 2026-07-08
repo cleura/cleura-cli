@@ -13,7 +13,8 @@ are current. Tick items as they land.
   `--debug` (redacted), signal handling, misuse-error UX, early `-o` validation,
   stdout=data / stderr=info + `--quiet`, dynamic completions, help examples,
   `config set`/`path`, atomic 0600 config writes, Windows config path,
-  `version` subcommand, `login --with-token`, `CLEURA_API_PASSWORD`.
+  `version` subcommand, `login --token-stdin` (renamed from --with-token
+  2026-07-08; login now also always switches the current profile), `CLEURA_API_PASSWORD`.
 - **Pre-commit review, 2026-07-07** (7 angles over the full initial diff): 10
   confirmed defects fixed before the first commit — nil-profile panic,
   wrong-token logout under env override, private-cloud endpoint pairing,

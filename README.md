@@ -54,7 +54,7 @@ deploy:
 
 The password can also be piped on stdin (`echo "$PW" | cleura login -u johndoe`),
 and a pre-created token can be stored with
-`echo "$TOKEN" | cleura login -u johndoe --with-token` (validated before storing).
+`echo "$TOKEN" | cleura login -u johndoe --token-stdin` (validated before storing).
 Note that API tokens expire, so CI jobs should log in per run rather than reuse a
 stored token.
 
@@ -71,12 +71,15 @@ endpoint it logged in to in the profile, together with the username and token.
 Working with more than one cloud is a matter of profiles:
 
 ```sh
-cleura login --profile compliant --cloud compliant   # separate profile for the compliant cloud
-cleura --profile compliant whoami                    # one-off profile selection
-cleura config use-profile compliant                  # switch the current profile
+cleura login --profile compliant --cloud compliant   # log in to a separate profile — it becomes current
+cleura --profile production whoami                   # one-off use of another profile
+cleura config use-profile production                 # switch the current profile without logging in
 cleura config list-profiles
 cleura config delete-profile compliant
 ```
+
+Logging in always makes that profile the current one (the `az login`/`gcloud`
+convention); `config use-profile` switches between already-logged-in profiles.
 
 When in doubt about what a command will actually use, `cleura config view` shows the
 effective settings and the source of each value (flag, `$CLEURA_*` variable, profile,

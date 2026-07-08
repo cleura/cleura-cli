@@ -17,13 +17,14 @@ import (
 
 func newLoginCommand(opts *globalOptions) *cobra.Command {
 	var username string
-	var withToken bool
+	var tokenStdin bool
 
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Log in to Cleura Cloud and store an API token",
 		Long: `Log in to Cleura Cloud with username and password and store the resulting
-API token in the configuration file.
+API token in the configuration file. The profile you log in to becomes the
+current profile.
 
 Accounts with two-factor authentication are prompted for the SMS code and must
 log in from an interactive terminal (WebAuthn is not supported yet).
@@ -31,12 +32,19 @@ log in from an interactive terminal (WebAuthn is not supported yet).
 For non-interactive use (CI), set CLEURA_API_PASSWORD in the environment — no
 prompt, no secrets on the command line (single-factor accounts only). The
 password can also be piped on stdin. Alternatively, store a pre-created API
-token with --with-token (read from stdin and validated first).`,
+token with --token-stdin (validated before storing).`,
 		Example: `  cleura login
   cleura login --profile compliant --cloud compliant
   CLEURA_API_PASSWORD=... cleura login -u johndoe     # CI: set as a masked variable
-  echo "$TOKEN" | cleura login -u johndoe --with-token`,
-		Args: cobra.NoArgs,
+  echo "$TOKEN" | cleura login -u johndoe --token-stdin`,
+		// Secrets are never accepted as arguments; catch the natural mistake
+		// of passing the token on the command line with a purpose-built hint.
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("login takes no arguments (got %q) — secrets are never passed on the command line; pipe them instead: echo \"$TOKEN\" | cleura login --token-stdin", args[0])
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			cfg, settings, err := opts.settings()
@@ -63,7 +71,7 @@ token with --with-token (read from stdin and validated first).`,
 			}
 
 			var token string
-			if withToken {
+			if tokenStdin {
 				token, err = loginWithProvidedToken(ctx, opts, prompt, url, username)
 			} else {
 				token, err = loginWithPassword(ctx, opts, prompt, url, username)
@@ -87,20 +95,25 @@ token with --with-token (read from stdin and validated first).`,
 			if settings.ProjectID != "" {
 				profile.ProjectID = settings.ProjectID
 			}
-			if cfg.CurrentProfile == "" {
-				cfg.CurrentProfile = settings.ProfileName
-			}
+			// The profile you log in to becomes the current profile — the
+			// az/gcloud/kubectl convention: acquiring credentials activates
+			// them. One-off use of another profile is what --profile is for.
+			previous := cfg.CurrentProfile
+			cfg.CurrentProfile = settings.ProfileName
 			if err := cfg.Save(); err != nil {
 				return err
 			}
 
 			opts.infof(cmd, "Logged in as %s (profile %q, %s)", username, settings.ProfileName, url)
+			if previous != "" && previous != settings.ProfileName {
+				opts.infof(cmd, "Current profile is now %q (was %q); switch back with 'cleura config use-profile %s'", settings.ProfileName, previous, previous)
+			}
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&username, "username", "u", "", "Username to log in with [$CLEURA_API_USERNAME]")
-	cmd.Flags().BoolVar(&withToken, "with-token", false, "Store an existing API token (read from stdin) instead of logging in with a password")
+	cmd.Flags().BoolVar(&tokenStdin, "token-stdin", false, "Read an existing API token from stdin and store it instead of logging in with a password")
 
 	return cmd
 }

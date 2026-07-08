@@ -38,7 +38,7 @@ cleura logout --profile ci          # always run this: it revokes the job's toke
 - **Alternative: pre-created token.** If you obtain a token some other way, skip the
   password entirely: set `CLEURA_API_USERNAME` + `CLEURA_API_TOKEN` as variables and run
   commands directly (no login step), or store it in a profile with
-  `echo "$TOKEN" | cleura login -u "$CLEURA_USERNAME" --with-token` (validated first).
+  `echo "$TOKEN" | cleura login -u "$CLEURA_USERNAME" --token-stdin` (validated first).
   Mind the expiry.
 - **Shared/shell runners:** parallel jobs sharing a HOME also share
   `~/.config/cleura/config.yaml`. Isolate with `export CLEURA_CONFIG="$PWD/cleura-config.yaml"`

@@ -136,7 +136,7 @@ func newConfigSetCommand(opts *globalOptions) *cobra.Command {
 		Short: "Set a profile value without logging in again",
 		Long: fmt.Sprintf(`Set one value in the selected profile. Keys: %s.
 An empty value ("") removes the stored value. Tokens cannot be set here; use
-'cleura login' (or 'cleura login --with-token').`, strings.Join(keys, ", ")),
+'cleura login' (or 'cleura login --token-stdin').`, strings.Join(keys, ", ")),
 		Example: "  cleura config set region kna1\n  cleura config set project_id a1b2c3\n  cleura config set --profile acme api_url https://rest.cloud.acme.example",
 		Args:    cobra.ExactArgs(2),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -148,7 +148,7 @@ An empty value ("") removes the stored value. Tokens cannot be set here; use
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key, value := args[0], args[1]
 			if key == "token" {
-				return fmt.Errorf("tokens cannot be set directly; run 'cleura login' or 'cleura login --with-token'")
+				return fmt.Errorf("tokens cannot be set directly; run 'cleura login' or 'cleura login --token-stdin'")
 			}
 			set, ok := settableKeys[key]
 			if !ok {
