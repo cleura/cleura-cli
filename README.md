@@ -175,6 +175,12 @@ other exit is a malfunction. `--validate` verifies the token against the API
 first. Compatibility: fields are only added — never renamed or removed — while
 `version` is `1`; a breaking change bumps it, and consumers must check it.
 
+## Command reference
+
+Every command and flag is documented in [`docs/reference/`](docs/reference/cleura.md),
+generated from the CLI's own help text (`make docs` regenerates it — the reference
+cannot drift from the binary).
+
 ## Shell completion
 
 Completion scripts come built in (including profile names and flag values):

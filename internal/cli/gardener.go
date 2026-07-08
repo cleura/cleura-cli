@@ -42,6 +42,7 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 			short:     "Wake a shoot cluster up from hibernation",
 			op:        "waking shoot",
 			confirmed: "Requested wake-up of shoot %q; watch progress with 'cleura gardener shoot list'",
+			example:   "  cleura gardener shoot wake prod",
 			call: func(ctx context.Context, client *cleura.Client, s config.Settings, name string) (*http.Response, []byte, error) {
 				resp, err := client.GardenerWakeUpShootWithResponse(ctx, s.Cloud, s.Region, s.ProjectID, name)
 				if err != nil {
@@ -55,6 +56,7 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 			short:     "Hibernate a shoot cluster (scales workloads and control plane down)",
 			op:        "hibernating shoot",
 			confirmed: "Requested hibernation of shoot %q; watch progress with 'cleura gardener shoot list'",
+			example:   "  cleura gardener shoot hibernate staging   # reversible: wake it with 'shoot wake'",
 			call: func(ctx context.Context, client *cleura.Client, s config.Settings, name string) (*http.Response, []byte, error) {
 				resp, err := client.GardenerHibernateShootWithResponse(ctx, s.Cloud, s.Region, s.ProjectID, name)
 				if err != nil {
@@ -68,6 +70,7 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 			short:     "Trigger a reconciliation of a shoot cluster",
 			op:        "reconciling shoot",
 			confirmed: "Requested reconcile of shoot %q; watch progress with 'cleura gardener shoot list'",
+			example:   "  cleura gardener shoot reconcile prod",
 			call: func(ctx context.Context, client *cleura.Client, s config.Settings, name string) (*http.Response, []byte, error) {
 				resp, err := client.GardenerReconcileShootWithResponse(ctx, s.Cloud, s.Region, s.ProjectID, name)
 				if err != nil {
@@ -243,15 +246,16 @@ or write it to a file with --file. The credential expires after --expiration
 // shootAction describes a shoot operation that takes no request body and
 // reports success via the HTTP status.
 type shootAction struct {
-	use, short, op, confirmed string
-	call                      func(ctx context.Context, client *cleura.Client, s config.Settings, name string) (*http.Response, []byte, error)
+	use, short, op, confirmed, example string
+	call                               func(ctx context.Context, client *cleura.Client, s config.Settings, name string) (*http.Response, []byte, error)
 }
 
 func newShootActionCommand(opts *globalOptions, action shootAction) *cobra.Command {
 	return &cobra.Command{
-		Use:   action.use,
-		Short: action.short,
-		Args:  cobra.ExactArgs(1),
+		Use:     action.use,
+		Short:   action.short,
+		Example: action.example,
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			settings, client, err := gardenerContext(opts)

@@ -15,7 +15,15 @@ func newLogoutCommand(opts *globalOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
 		Short: "Revoke the profile's stored API token and remove it from the configuration",
-		Args:  cobra.NoArgs,
+		Long: `Revoke the selected profile's stored API token server-side and remove it from
+the configuration file. The profile itself (endpoint, username, region,
+project) is kept for the next login.
+
+Revocation deliberately targets the profile's own stored token: a token in
+CLEURA_API_TOKEN is never touched by logout.`,
+		Example: `  cleura logout
+  cleura logout --profile ci -q   # CI cleanup: quiet, exit 0 even when nothing is stored`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, settings, err := opts.settings()
 			if err != nil {

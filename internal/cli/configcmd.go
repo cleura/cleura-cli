@@ -183,7 +183,11 @@ func newConfigPathCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "path",
 		Short: "Print the configuration file path",
-		Args:  cobra.NoArgs,
+		Long: `Print the configuration file path: $CLEURA_CONFIG if set, otherwise
+$XDG_CONFIG_HOME/cleura/config.yaml, otherwise ~/.config/cleura/config.yaml
+(the OS config directory on Windows).`,
+		Example: "  cleura config path",
+		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, err := config.Path()
 			if err != nil {
@@ -240,9 +244,10 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 	}
 
 	return &cobra.Command{
-		Use:   "list-profiles",
-		Short: "List configured profiles",
-		Args:  cobra.NoArgs,
+		Use:     "list-profiles",
+		Short:   "List configured profiles",
+		Example: "  cleura config list-profiles\n  cleura config list-profiles -o json   # tokens are never included",
+		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
 			if err != nil {
@@ -300,8 +305,12 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 
 func newDeleteProfileCommand(opts *globalOptions) *cobra.Command {
 	return &cobra.Command{
-		Use:               "delete-profile <name>",
-		Short:             "Remove a profile from the configuration",
+		Use:   "delete-profile <name>",
+		Short: "Remove a profile from the configuration",
+		Long: `Remove a profile from the configuration file. A stored token is revoked
+server-side first (best effort — the profile is deleted even when revocation
+fails, and the warning says so).`,
+		Example:           "  cleura config delete-profile old-test",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeProfileNameArg,
 		RunE: func(cmd *cobra.Command, args []string) error {

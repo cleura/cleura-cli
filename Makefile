@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS  = -X main.version=$(VERSION)
 
-.PHONY: build install test vet
+.PHONY: build install test vet docs
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o cleura ./cmd/cleura
@@ -14,3 +14,6 @@ test:
 
 vet:
 	go vet ./...
+
+docs:
+	go run ./cmd/gendocs
