@@ -41,12 +41,15 @@ func Render(w io.Writer, format string, v any, table func(w io.Writer) error) er
 		// ignores — encoding them directly would mangle every key
 		// (authproviderid instead of auth_provider_id) and drop omitempty.
 		// Round-trip through JSON so YAML uses the same field names as JSON.
+		// The intermediate parse must be yaml.Unmarshal (JSON is valid YAML):
+		// json.Unmarshal would decode every number as float64 and render
+		// integers >= 1e6 in scientific notation, corrupting IDs.
 		jsonBytes, err := json.Marshal(v)
 		if err != nil {
 			return err
 		}
 		var generic any
-		if err := json.Unmarshal(jsonBytes, &generic); err != nil {
+		if err := yaml.Unmarshal(jsonBytes, &generic); err != nil {
 			return err
 		}
 		enc := yaml.NewEncoder(w)

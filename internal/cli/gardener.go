@@ -22,11 +22,17 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gardener",
 		Short: "Manage Gardener Kubernetes clusters",
+		// A typo'd subcommand must fail loudly (exit 1 + suggestions), not
+		// print help to stdout with exit 0 — CI pipelines key off exit codes.
+		Args: cobra.NoArgs,
+		RunE: groupHelp,
 	}
 
 	shoot := &cobra.Command{
 		Use:   "shoot",
 		Short: "Manage shoot clusters",
+		Args:  cobra.NoArgs,
+		RunE:  groupHelp,
 	}
 	shoot.AddCommand(
 		newShootListCommand(opts),

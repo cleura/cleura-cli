@@ -15,6 +15,9 @@ func newConfigCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage CLI configuration and profiles",
+		// Fail loudly on typo'd subcommands instead of exit-0 help output.
+		Args: cobra.NoArgs,
+		RunE: groupHelp,
 	}
 	cmd.AddCommand(
 		newConfigViewCommand(opts),

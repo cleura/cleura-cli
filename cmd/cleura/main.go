@@ -29,7 +29,11 @@ func main() {
 	defer stop()
 
 	if err := cli.NewRootCommand(v).ExecuteContext(ctx); err != nil {
-		if errors.Is(err, context.Canceled) {
+		// Also treat any error after a delivered signal as an interrupt:
+		// from Go 1.26, NotifyContext cancels with a cause ("interrupt
+		// signal received") that in-flight HTTP errors wrap instead of
+		// context.Canceled.
+		if errors.Is(err, context.Canceled) || ctx.Err() != nil {
 			os.Exit(130)
 		}
 		fmt.Fprintln(os.Stderr, "Error:", err)

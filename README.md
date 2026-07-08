@@ -7,12 +7,20 @@ API client, commands are added incrementally as the API surface matures.
 
 ## Install
 
+The repositories are private, so Go must fetch modules directly from GitHub
+instead of the public module proxy. One-time setup, then install:
+
 ```sh
-make install    # installs the "cleura" binary via go install
+git config --global url."git@github.com:".insteadOf "https://github.com/"  # fetch GitHub over SSH
+export GOPRIVATE='github.com/cleura/*'                                     # skip proxy + checksum DB
+
+go install github.com/cleura/cleura-cli/cmd/cleura@latest
 ```
 
-> Until `cleura-client-go` is published and tagged, building requires a sibling
-> checkout of that repository (see the `replace` directive in `go.mod`).
+(In CI, use an access token instead of SSH — see [`examples/ci/`](examples/ci/).)
+
+From a checkout: `make install`. Prebuilt binaries are planned once the
+release pipeline lands.
 
 ## Getting started
 
@@ -93,6 +101,12 @@ profiles:
     api_url: https://rest.cloud.acme.example
     username: johndoe
 ```
+
+> **The config file format is internal, not an API.** It is shown here so you
+> know what is stored where; its schema may change between releases. Programs
+> and scripts must not parse it — use the CLI instead (`cleura config view -o json`
+> for inspection). A dedicated machine-readable credential command for tool
+> integrations (e.g. the Terraform provider) is planned.
 
 Environment variables (shared with the
 [Terraform provider](https://github.com/cleura/terraform-provider-cleura)):

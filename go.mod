@@ -3,7 +3,7 @@ module github.com/cleura/cleura-cli
 go 1.25.0
 
 require (
-	github.com/cleura/cleura-client-go v0.0.0
+	github.com/cleura/cleura-client-go v0.1.0
 	github.com/spf13/cobra v1.10.1
 	golang.org/x/term v0.34.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -20,6 +20,3 @@ require (
 	golang.org/x/sys v0.39.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
-
-// Until cleura-client-go is published and tagged, build against a sibling checkout.
-replace github.com/cleura/cleura-client-go => ../cleura-client-go

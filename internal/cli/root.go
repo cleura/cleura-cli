@@ -107,6 +107,15 @@ func newVersionCommand(opts *globalOptions) *cobra.Command {
 	}
 }
 
+// groupHelp is the RunE for parent commands that only route to subcommands.
+// Making them runnable is what activates their Args validation: without it,
+// cobra prints help with exit 0 for typo'd subcommands, which would let CI
+// pipelines pass silently. Paired with Args: cobra.NoArgs, a bare invocation
+// shows help and an unknown subcommand fails with exit 1.
+func groupHelp(cmd *cobra.Command, args []string) error {
+	return cmd.Help()
+}
+
 // infof prints an informational message to stderr unless --quiet is set.
 // Informational output never goes to stdout, which carries only data.
 func (o *globalOptions) infof(cmd *cobra.Command, format string, a ...any) {
