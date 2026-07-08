@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLoadSaveRoundTrip(t *testing.T) {
@@ -48,6 +49,50 @@ func TestLoadSaveRoundTrip(t *testing.T) {
 	}
 	if !strings.HasPrefix(string(data), "# Managed by the cleura CLI") {
 		t.Errorf("saved config missing the managed-file header")
+	}
+}
+
+func TestVersionStampAndFutureRejection(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("CLEURA_CONFIG", path)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Profile("default").Token = "t"
+	if err := cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if !strings.Contains(string(data), "version: 1") {
+		t.Errorf("Save should stamp the schema version, got:\n%s", data)
+	}
+
+	if err := os.WriteFile(path, []byte("version: 99\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "newer cleura") {
+		t.Errorf("future config versions must be rejected with guidance, got: %v", err)
+	}
+}
+
+func TestTokenStoredAtResolution(t *testing.T) {
+	t.Setenv("CLEURA_PROFILE", "")
+	t.Setenv("CLEURA_API_TOKEN", "")
+	stored := time.Date(2026, 7, 8, 10, 0, 0, 0, time.UTC)
+	cfg := &Config{Profiles: map[string]*Profile{
+		"default": {Username: "u", Token: "t", TokenStoredAt: stored},
+	}}
+
+	if s := cfg.Resolve(Flags{}); !s.TokenStoredAt.Equal(stored) {
+		t.Errorf("profile token should carry its stored-at time, got %v", s.TokenStoredAt)
+	}
+
+	// An env token has unknown age: TokenStoredAt must stay zero.
+	t.Setenv("CLEURA_API_TOKEN", "env-token")
+	if s := cfg.Resolve(Flags{}); !s.TokenStoredAt.IsZero() {
+		t.Errorf("env token must not inherit the profile's stored-at time, got %v", s.TokenStoredAt)
 	}
 }
 

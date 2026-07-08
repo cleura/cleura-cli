@@ -36,7 +36,12 @@ func main() {
 		if errors.Is(err, context.Canceled) || ctx.Err() != nil {
 			os.Exit(130)
 		}
+		exitCode := 1
+		var coded *cli.ExitCodeError
+		if errors.As(err, &coded) {
+			exitCode = coded.Code
+		}
 		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(1)
+		os.Exit(exitCode)
 	}
 }

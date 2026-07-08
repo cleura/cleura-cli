@@ -5,6 +5,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/cleura/cleura-cli/internal/config"
 	"github.com/cleura/cleura-cli/internal/output"
@@ -23,6 +24,7 @@ func newConfigCommand(opts *globalOptions) *cobra.Command {
 		newConfigViewCommand(opts),
 		newConfigSetCommand(opts),
 		newConfigPathCommand(),
+		newGetCredentialsCommand(opts),
 		newUseProfileCommand(opts),
 		newListProfilesCommand(opts),
 		newDeleteProfileCommand(opts),
@@ -63,6 +65,11 @@ selected profile are pointed out on stderr. The token value is never shown.`,
 			if s.Token != "" {
 				token = "(set)"
 			}
+			tokenStoredAt, tokenStoredAtSource := "", ""
+			if !s.TokenStoredAt.IsZero() {
+				tokenStoredAt = s.TokenStoredAt.UTC().Format(time.RFC3339)
+				tokenStoredAtSource = "profile"
+			}
 
 			path, pathSource, err := config.PathWithSource()
 			if err != nil {
@@ -76,6 +83,7 @@ selected profile are pointed out on stderr. The token value is never shown.`,
 				{"api_url", s.APIURL, s.Sources.APIURL},
 				{"username", s.Username, s.Sources.Username},
 				{"token", token, s.Sources.Token},
+				{"token_stored_at", tokenStoredAt, tokenStoredAtSource},
 				{"region", s.Region, s.Sources.Region},
 				{"project_id", s.ProjectID, s.Sources.ProjectID},
 				{"config_file", path, pathSource},

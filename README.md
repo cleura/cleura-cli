@@ -113,9 +113,8 @@ profiles:
 
 > **The config file format is internal, not an API.** It is shown here so you
 > know what is stored where; its schema may change between releases. Programs
-> and scripts must not parse it — use the CLI instead (`cleura config view -o json`
-> for inspection). A dedicated machine-readable credential command for tool
-> integrations (e.g. the Terraform provider) is planned.
+> and scripts must not parse it — use `cleura config get-credentials` (see
+> [Tool integration](#tool-integration)) or `cleura config view -o json`.
 
 Environment variables (shared with the
 [Terraform provider](https://github.com/cleura/terraform-provider-cleura)):
@@ -144,6 +143,37 @@ cleura config set region kna1
 cleura config set project_id a1b2c3
 cleura config path                     # where the config file lives
 ```
+
+## Tool integration
+
+`cleura config get-credentials` is the stable interface for tools that
+authenticate via the CLI (the Terraform provider's planned `cleura` credential
+source, scripts, anything else). It prints the effective credentials — resolved
+with the usual precedence — as one JSON object:
+
+```sh
+$ cleura config get-credentials
+{
+  "version": 1,
+  "profile": "work",
+  "cloud": "compliant",
+  "endpoint": "https://rest.compliant.cleura.cloud",
+  "username": "svc",
+  "token": "...",
+  "region": "sto1",
+  "project_id": "p-1",
+  "token_stored_at": "2026-07-08T08:00:00Z"
+}
+
+$ cleura config get-credentials | jq -r .token   # e.g. for curl scripts
+```
+
+Exit codes are part of the contract: `0` credentials printed; `2` no usable
+credentials for the selected profile (a JSON `{"error": ...}` object is printed
+on stdout, so credential chains can fall through to their next source); any
+other exit is a malfunction. `--validate` verifies the token against the API
+first. Compatibility: fields are only added — never renamed or removed — while
+`version` is `1`; a breaking change bumps it, and consumers must check it.
 
 ## Shell completion
 

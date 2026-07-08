@@ -9,10 +9,16 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"time"
 
 	"github.com/cleura/cleura-client-go/cleura"
 	"gopkg.in/yaml.v3"
 )
+
+// Version is the current config file schema version, stamped on every Save.
+// Bump it only for changes an older CLI could misread; readers reject files
+// from the future instead of silently dropping fields they do not know.
+const Version = 1
 
 // Profile holds the stored settings for one named profile.
 type Profile struct {
@@ -26,10 +32,15 @@ type Profile struct {
 	Token     string `yaml:"token,omitempty"`
 	Region    string `yaml:"region,omitempty"`
 	ProjectID string `yaml:"project_id,omitempty"`
+	// TokenStoredAt records when the token was obtained. Tokens are
+	// short-lived and the API exposes no expiry, so the storage time is the
+	// only basis for staleness diagnostics.
+	TokenStoredAt time.Time `yaml:"token_stored_at,omitempty"`
 }
 
 // Config is the on-disk CLI configuration.
 type Config struct {
+	Version        int                 `yaml:"version,omitempty"`
 	CurrentProfile string              `yaml:"current_profile,omitempty"`
 	Profiles       map[string]*Profile `yaml:"profiles,omitempty"`
 
@@ -84,12 +95,16 @@ func Load() (*Config, error) {
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("parsing config %s: %w\nfix the file, or move it aside and run 'cleura login' to recreate it", path, err)
 	}
+	if cfg.Version > Version {
+		return nil, fmt.Errorf("config %s was written by a newer cleura (config version %d, this cleura supports %d); upgrade cleura, or move the file aside and run 'cleura login' to recreate it", path, cfg.Version, Version)
+	}
 	return cfg, nil
 }
 
 // Save writes the config file with owner-only permissions (it contains
 // tokens), atomically: a crash mid-write must not destroy the stored tokens.
 func (c *Config) Save() error {
+	c.Version = Version
 	data, err := yaml.Marshal(c)
 	if err != nil {
 		return err
@@ -150,6 +165,9 @@ type Settings struct {
 	Token         string
 	Region        string
 	ProjectID     string
+	// TokenStoredAt is when the effective token was obtained. Only known
+	// when the token comes from the profile; zero for env-provided tokens.
+	TokenStoredAt time.Time
 
 	// Sources records where each value above was resolved from, for display
 	// by "cleura config view".
@@ -216,6 +234,9 @@ func (c *Config) Resolve(flags Flags) Settings {
 		candidate{os.Getenv("CLEURA_API_TOKEN"), "$CLEURA_API_TOKEN"},
 		candidate{profile.Token, "profile"},
 	)
+	if s.Sources.Token == "profile" {
+		s.TokenStoredAt = profile.TokenStoredAt
+	}
 	s.Region, s.Sources.Region = pick(
 		candidate{flags.Region, "--region"},
 		candidate{os.Getenv("CLEURA_REGION"), "$CLEURA_REGION"},

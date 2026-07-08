@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	api "github.com/cleura/cleura-client-go/api"
 	"github.com/cleura/cleura-client-go/cleura"
@@ -85,6 +86,9 @@ token with --token-stdin (validated before storing).`,
 			profile := cfg.Profile(settings.ProfileName)
 			profile.Username = username
 			profile.Token = token
+			// Tokens are short-lived and the API exposes no expiry; the
+			// storage time is the only basis for staleness diagnostics.
+			profile.TokenStoredAt = time.Now().UTC().Truncate(time.Second)
 			// Record the endpoint the token was created against, however it
 			// was selected, so later commands reach the same API.
 			profile.Cloud = settings.Cloud

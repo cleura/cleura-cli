@@ -64,15 +64,23 @@ The terraform provider will consume CLI credentials by **exec'ing the CLI**
 (az-CLI subprocess pattern), never by parsing config.yaml (declared internal in
 the README). In dependency order:
 
-1. [ ] Record `token_stored_at` in the profile at login (cheap now, impossible
+1. [x] Record `token_stored_at` in the profile at login (cheap now, impossible
    retroactively; enables staleness diagnosis without a network call).
-2. [ ] Add a `version: 1` field to the config schema before any other new fields.
-3. [ ] `cleura config get-credentials -o json`: versioned envelope
+   *(Done 2026-07-08 — also surfaced in `config view` and the 401/403 hint,
+   which now says "the token was stored 23 hours ago".)*
+2. [x] Add a `version: 1` field to the config schema before any other new fields.
+   *(Done 2026-07-08 — stamped on Save; files from a newer schema are rejected
+   with upgrade guidance instead of being silently rewritten.)*
+3. [x] `cleura config get-credentials`: versioned envelope
    {version, profile, cloud, endpoint, username, token, region, project_id,
-   token_stored_at} — the provider's consumption contract.
+   token_stored_at} — the provider's consumption contract. JSON-only output,
+   exit 0 = credentials / exit 2 + JSON error = fall through / other = broken;
+   optional --validate. Documented in README "Tool integration".
+   *(Done 2026-07-08 with envelope/exit-code regression tests.)*
 4. [ ] Provider-side work: credential source "cli" with precedence
    explicit > env > CLI, a `profile` attribute; bundle with migrating the
    provider off its duplicated generated client onto cleura-client-go.
+   (See docs/provider-integration-plan.md Phases 1–2 — the next work item.)
 
 Decision recorded: `internal/config` stays private; the subprocess is the boundary.
 

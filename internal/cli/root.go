@@ -213,8 +213,25 @@ func apiAuthError(op string, s config.Settings, resp *http.Response, body []byte
 		return err
 	}
 	hint := fmt.Sprintf("the token may be expired or revoked — run 'cleura login' to refresh profile %q", s.ProfileName)
+	if s.Sources.Token == "profile" && !s.TokenStoredAt.IsZero() {
+		hint = fmt.Sprintf("the token was stored %s ago and tokens are short-lived — run 'cleura login' to refresh profile %q", humanAge(time.Since(s.TokenStoredAt)), s.ProfileName)
+	}
 	if s.Sources.Token == "$CLEURA_API_TOKEN" {
 		hint += "; note that CLEURA_API_TOKEN is set in your environment and overrides the profile's stored token"
 	}
 	return fmt.Errorf("%w\n%s", err, hint)
+}
+
+// humanAge renders a duration as a rough human quantity for diagnostics.
+func humanAge(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return "less than a minute"
+	case d < time.Hour:
+		return fmt.Sprintf("%d minutes", int(d.Minutes()))
+	case d < 48*time.Hour:
+		return fmt.Sprintf("%d hours", int(d.Hours()))
+	default:
+		return fmt.Sprintf("%d days", int(d.Hours()/24))
+	}
 }

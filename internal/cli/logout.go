@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/cleura/cleura-cli/internal/config"
 	"github.com/cleura/cleura-client-go/cleura"
@@ -38,6 +39,7 @@ func newLogoutCommand(opts *globalOptions) *cobra.Command {
 			}
 
 			profile.Token = ""
+			profile.TokenStoredAt = time.Time{}
 			if err := cfg.Save(); err != nil {
 				return err
 			}
