@@ -86,10 +86,13 @@ explicit HCL attributes  →  CLEURA_* environment variables  →  cleura CLI  �
   tier (it is a fallback), logged at debug level. Run
   `cleura config get-credentials` with a ~5s timeout; parse; require
   `version == 1`; consume endpoint/cloud/username/token.
-- **Region/project_id**: available in the envelope but deliberately **not**
-  used as resource defaults — infrastructure code should state region and
-  project explicitly for reproducibility. Credentials are ambient; topology is
-  not. (Revisit if users ask.)
+- **Region/project_id**: inherited from the envelope as the last resort, each
+  with a warning diagnostic naming the value, the CLI profile, and how to pin
+  it. (Revised 2026-07-08 after live testing: requiring explicit topology
+  broke the login-and-plan flow within minutes of real use. The warning keeps
+  the azurerm-v4 lesson — silent subscription inheritance was regretted and
+  reverted there — without the friction: convenience by default, dependence on
+  operator state loudly visible on every plan.)
 - **Error UX** (the heart of the DX):
   - Nothing anywhere: one error listing all three tiers with copy-paste fixes
     — set `token` in the provider block, or `CLEURA_API_TOKEN` +

@@ -154,7 +154,8 @@ An empty value ("") removes the stored value. Tokens cannot be set here; use
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			key, value := args[0], args[1]
+			// Accept flag spelling too: --project-id the flag, project_id the key.
+			key, value := strings.ReplaceAll(args[0], "-", "_"), args[1]
 			if key == "token" {
 				return fmt.Errorf("tokens cannot be set directly; run 'cleura login' or 'cleura login --token-stdin'")
 			}
