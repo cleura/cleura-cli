@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/cleura/cleura-cli/internal/output"
 	"github.com/spf13/cobra"
@@ -35,19 +34,10 @@ func newWhoamiCommand(opts *globalOptions) *cobra.Command {
 			user := resp.JSON200
 
 			return output.Render(cmd.OutOrStdout(), opts.output, user, func(w io.Writer) error {
-				var parts []string
-				if user.Firstname != nil && *user.Firstname != "" {
-					parts = append(parts, *user.Firstname)
-				}
-				if user.Lastname != nil && *user.Lastname != "" {
-					parts = append(parts, *user.Lastname)
-				}
-				name := strings.Join(parts, " ")
-
 				kv := output.NewKVWriter(w)
 				kv.Row("ID", user.Id)
 				kv.Row("Username", user.Name)
-				kv.Row("Name", name)
+				kv.Row("Name", displayName(user.Firstname, user.Lastname))
 				kv.Row("Email", user.Email)
 				kv.Row("Admin", user.Admin)
 				kv.Row("Currency", user.Currency.Code)

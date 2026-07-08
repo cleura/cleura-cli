@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cleura/cleura-cli/internal/config"
@@ -78,6 +79,7 @@ from.`,
 		newLoginCommand(opts),
 		newLogoutCommand(opts),
 		newWhoamiCommand(opts),
+		newUserCommand(opts),
 		newConfigCommand(opts),
 		newGardenerCommand(opts),
 		newVersionCommand(opts),
@@ -210,6 +212,13 @@ func apiError(op string, resp *http.Response, body []byte) error {
 func apiAuthError(op string, s config.Settings, resp *http.Response, body []byte) error {
 	err := apiError(op, resp, body)
 	if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusForbidden {
+		return err
+	}
+	// A 403 can also mean missing privileges ("No access: ..."), where
+	// re-logging in cannot help; hint only when the API blames the token
+	// itself, or when the body carries no message to judge by.
+	var e api.FrameworkHttpErrorResponse
+	if json.Unmarshal(body, &e) == nil && e.Error.Message != "" && !strings.Contains(strings.ToLower(e.Error.Message), "token") {
 		return err
 	}
 	hint := fmt.Sprintf("the token may be expired or revoked — run 'cleura login' to refresh profile %q", s.ProfileName)

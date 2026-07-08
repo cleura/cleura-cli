@@ -30,6 +30,8 @@ cleura whoami             # show the authenticated user
 cleura whoami -o json     # machine-readable output
 cleura logout             # revoke and remove the stored token
 
+cleura user list                                             # account users with their roles
+cleura user get johndoe                                      # one user, full privilege breakdown
 cleura gardener shoot list --region sto1 --project-id <id>   # list Kubernetes clusters
 cleura gardener shoot kubeconfig prod > prod.kubeconfig      # time-limited admin kubeconfig
 cleura gardener shoot kubeconfig prod --expiration 8h -f ~/.kube/prod.yaml

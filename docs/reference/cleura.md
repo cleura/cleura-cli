@@ -34,6 +34,7 @@ from.
 * [cleura gardener](cleura_gardener.md)	 - Manage Gardener Kubernetes clusters
 * [cleura login](cleura_login.md)	 - Log in to Cleura Cloud and store an API token
 * [cleura logout](cleura_logout.md)	 - Revoke the profile's stored API token and remove it from the configuration
+* [cleura user](cleura_user.md)	 - View users in the Cleura account
 * [cleura version](cleura_version.md)	 - Show the cleura version
 * [cleura whoami](cleura_whoami.md)	 - Show the currently authenticated user
 
