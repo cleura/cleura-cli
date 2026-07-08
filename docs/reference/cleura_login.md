@@ -8,6 +8,11 @@ Log in to Cleura Cloud with username and password and store the resulting
 API token in the configuration file. The profile you log in to becomes the
 current profile.
 
+Logging in again with the same identity refreshes the profile's token. When
+the login would replace a different identity (another username, cloud or
+endpoint) in an existing profile, confirmation is required — use --profile
+to keep identities in separate profiles instead.
+
 SMS is the only two-factor method the CLI supports; accounts with SMS 2FA are
 prompted for the code and must log in from an interactive terminal. WebAuthn
 accounts can create an API token in the Control Panel instead and store it

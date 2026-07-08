@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cleura/cleura-cli/internal/config"
 	api "github.com/cleura/cleura-client-go/api"
 	"github.com/cleura/cleura-client-go/cleura"
 	"github.com/spf13/cobra"
@@ -26,6 +27,11 @@ func newLoginCommand(opts *globalOptions) *cobra.Command {
 		Long: `Log in to Cleura Cloud with username and password and store the resulting
 API token in the configuration file. The profile you log in to becomes the
 current profile.
+
+Logging in again with the same identity refreshes the profile's token. When
+the login would replace a different identity (another username, cloud or
+endpoint) in an existing profile, confirmation is required — use --profile
+to keep identities in separate profiles instead.
 
 SMS is the only two-factor method the CLI supports; accounts with SMS 2FA are
 prompted for the code and must log in from an interactive terminal. WebAuthn
@@ -73,6 +79,28 @@ token with --token-stdin (validated before storing).`,
 				return fmt.Errorf("username must not be empty")
 			}
 
+			// Same identity = token refresh, silent. A different identity
+			// (user or endpoint) would destroy the stored login — ask first,
+			// and before any password/SMS round-trip. Non-interactive runs
+			// refuse instead of prompting.
+			newCloud, newAPIURL := persistedEndpoint(settings)
+			replacing := false
+			if existing := cfg.Profiles[settings.ProfileName]; existing != nil && existing.Token != "" &&
+				(existing.Username != username || existing.Cloud != newCloud || existing.APIURL != newAPIURL) {
+				replacing = true
+				situation := fmt.Sprintf("profile %q is currently logged in as %s on %s; this login is %s on %s",
+					settings.ProfileName,
+					existing.Username, endpointLabel(existing.Cloud, existing.APIURL),
+					username, endpointLabel(newCloud, newAPIURL))
+				ok, err := prompt.confirm(ctx, situation+".\nReplace it?")
+				if err != nil {
+					return err
+				}
+				if !ok {
+					return fmt.Errorf("%s — refusing to overwrite; use --profile <name> to log in to a separate profile", situation)
+				}
+			}
+
 			var token string
 			if tokenStdin {
 				token, err = loginWithProvidedToken(ctx, opts, prompt, url, username)
@@ -90,17 +118,13 @@ token with --token-stdin (validated before storing).`,
 			// storage time is the only basis for staleness diagnostics.
 			profile.TokenStoredAt = time.Now().UTC().Truncate(time.Second)
 			// Record the endpoint the token was created against, however it
-			// was selected, so later commands reach the same API. A cloud
-			// that was only the built-in default must not be stored next to
-			// an explicit endpoint override: {api_url}-only profiles keep
-			// cloud unset, so a later --cloud public is never paired with
-			// the private URL.
-			if settings.APIURL != "" && settings.Sources.Cloud == "default" {
-				profile.Cloud = ""
-			} else {
-				profile.Cloud = settings.Cloud
+			// was selected, so later commands reach the same API.
+			profile.Cloud, profile.APIURL = persistedEndpoint(settings)
+			// A confirmed identity replacement resets the contextual fields:
+			// the old identity's region/project do not apply to the new one.
+			if replacing {
+				profile.Region, profile.ProjectID = "", ""
 			}
-			profile.APIURL = settings.APIURL
 			// Convenience context worth remembering, but never blank stored
 			// values on a plain re-login.
 			if settings.Region != "" {
@@ -130,6 +154,17 @@ token with --token-stdin (validated before storing).`,
 	cmd.Flags().BoolVar(&tokenStdin, "token-stdin", false, "Read an existing API token from stdin and store it instead of logging in with a password")
 
 	return cmd
+}
+
+// persistedEndpoint is the cloud/api_url pair a login stores. A cloud that
+// was only the built-in default must not be stored next to an explicit
+// endpoint override: {api_url}-only profiles keep cloud unset, so a later
+// --cloud public is never paired with the private URL.
+func persistedEndpoint(s config.Settings) (cloud, apiURL string) {
+	if s.APIURL != "" && s.Sources.Cloud == "default" {
+		return "", s.APIURL
+	}
+	return s.Cloud, s.APIURL
 }
 
 // loginWithPassword runs the token creation flow, including SMS two-factor

@@ -76,6 +76,19 @@ func (p *prompter) read(ctx context.Context, name string, clean func(string) str
 	}
 }
 
+// confirm asks a yes/no question, defaulting to no. Exhausted stdin also
+// means no.
+func (p *prompter) confirm(ctx context.Context, question string) (bool, error) {
+	answer, err := p.read(ctx, question+" [y/N]", strings.TrimSpace)
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return false, nil
+		}
+		return false, err
+	}
+	return strings.EqualFold(answer, "y") || strings.EqualFold(answer, "yes"), nil
+}
+
 // secret reads without echo when stdin is a terminal and falls back to line
 // otherwise (piped input). On cancellation the terminal state is restored
 // explicitly: term.ReadPassword's own restore never runs if the process is
