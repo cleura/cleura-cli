@@ -103,6 +103,14 @@ Decision recorded: `internal/config` stays private; the subprocess is the bounda
 - [ ] Commit the OpenAPI spec snapshot for reproducible generation vs today's
   live fetch — revisit at the first regeneration that affects SDK consumers.
 
+**Decided 2026-07-08 — SMS stays the only CLI-supported 2FA.** WebAuthn cannot be
+supported CLI-side: the REST API has no assertion endpoints (auth surface is
+password, SMS, and an email-hash flow). If demand appears, the path is a
+browser-assisted login flow (device code / localhost redirect — the gh/az/gcloud
+pattern, which would also cover passkeys and future SSO), not native CTAP2
+(CGO, per-OS authenticator APIs, no passkey access). Documented workaround:
+Control Panel token + `login --token-stdin`.
+
 ## API-side asks — bundle into one ticket for the REST team
 
 - [ ] admin-kubeconfig responds `Content-Type: text/html` for a YAML body (spec

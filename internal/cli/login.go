@@ -26,8 +26,10 @@ func newLoginCommand(opts *globalOptions) *cobra.Command {
 API token in the configuration file. The profile you log in to becomes the
 current profile.
 
-Accounts with two-factor authentication are prompted for the SMS code and must
-log in from an interactive terminal (WebAuthn is not supported yet).
+SMS is the only two-factor method the CLI supports; accounts with SMS 2FA are
+prompted for the code and must log in from an interactive terminal. WebAuthn
+accounts can create an API token in the Control Panel instead and store it
+with --token-stdin.
 
 For non-interactive use (CI), set CLEURA_API_PASSWORD in the environment — no
 prompt, no secrets on the command line (single-factor accounts only). The

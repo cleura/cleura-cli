@@ -41,6 +41,12 @@ cleura gardener shoot reconcile prod                         # trigger a reconci
 `--region` and `--project-id` can be stored in the profile (pass them to
 `cleura login`) or set via `CLEURA_REGION` / `CLEURA_PROJECT_ID`.
 
+**Two-factor authentication:** SMS is the only 2FA method the CLI supports
+(the API offers no way to complete a WebAuthn ceremony outside the browser).
+Accounts using WebAuthn or passkeys can log in to the Control Panel, create an
+API token there, and store it with
+`echo "$TOKEN" | cleura login -u <username> --token-stdin`.
+
 Non-interactive login for CI (single-factor accounts only — SMS 2FA requires an
 interactive terminal). Set `CLEURA_API_PASSWORD` as a masked CI variable and the
 login needs no prompt, no pipe, and no secret on any command line:
