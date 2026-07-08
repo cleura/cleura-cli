@@ -7,8 +7,8 @@ API client, commands are added incrementally as the API surface matures.
 
 ## Install
 
-The repositories are private, so Go must fetch modules directly from GitHub
-instead of the public module proxy. One-time setup, then install:
+This repository is private, so Go must fetch it directly from GitHub instead
+of the public module proxy. One-time setup, then install:
 
 ```sh
 git config --global url."git@github.com:".insteadOf "https://github.com/"  # fetch GitHub over SSH
