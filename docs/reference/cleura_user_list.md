@@ -6,7 +6,8 @@ List the users in the account
 
 List the users in the account with their privileges. The ROLES column
 summarizes each privilege area as area:type (types: full, read, or
-project(n) for per-project grants); account administrators show as "admin".
+project(n) for per-project grants), compressed to "full (all areas)" when
+every area has full access. Use 'cleura user get' for the full breakdown.
 
 Viewing other users requires the users privilege or account administrator
 rights on the logged-in account.

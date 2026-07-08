@@ -33,7 +33,8 @@ func newUserListCommand(opts *globalOptions) *cobra.Command {
 		Short: "List the users in the account",
 		Long: `List the users in the account with their privileges. The ROLES column
 summarizes each privilege area as area:type (types: full, read, or
-project(n) for per-project grants); account administrators show as "admin".
+project(n) for per-project grants), compressed to "full (all areas)" when
+every area has full access. Use 'cleura user get' for the full breakdown.
 
 Viewing other users requires the users privilege or account administrator
 rights on the logged-in account.`,
@@ -73,7 +74,7 @@ rights on the logged-in account.`,
 						strDeref(u.Email),
 						yesNo(u.Admin),
 						yesNo(hasTwoFactor(u.TwoFactorLogin)),
-						rolesSummary(u.Admin, u.Privileges),
+						rolesSummary(u.Privileges),
 					})
 				}
 				return output.Table(w, header, rows)
@@ -115,8 +116,14 @@ func newUserGetCommand(opts *globalOptions) *cobra.Command {
 				}
 				kv.Row("Admin", yesNo(user.Admin))
 				kv.Row("2FA", twoFactorSummary(user.TwoFactorLogin))
-				kv.Row("Roles", rolesSummary(user.Admin, user.Privileges))
-				for _, area := range privilegeAreas(user.Privileges) {
+				areas := privilegeAreas(user.Privileges)
+				if len(areas) > 0 {
+					kv.Row("Privileges", "")
+					for _, area := range areas {
+						kv.Row("  "+area.display, privilegeLabel(area.p))
+					}
+				}
+				for _, area := range areas {
 					if area.p.ProjectPrivileges == nil || len(*area.p.ProjectPrivileges) == 0 {
 						continue
 					}
@@ -124,7 +131,7 @@ func newUserGetCommand(opts *globalOptions) *cobra.Command {
 					for _, pp := range *area.p.ProjectPrivileges {
 						grants = append(grants, pp.ProjectId+":"+string(pp.Type))
 					}
-					kv.Row("Projects ("+area.name+")", strings.Join(grants, ", "))
+					kv.Row("Projects ("+area.display+")", strings.Join(grants, ", "))
 				}
 				kv.Row("Currency", user.Currency.Code)
 				if lang := strDeref(user.Language); lang != "" {
@@ -218,20 +225,21 @@ func twoFactorSummary(t *api.CommonUserLoginTwoFactorLogin) string {
 }
 
 type privilegeArea struct {
-	name string
-	p    *api.CommonUserLoginPrivilege
+	name    string // compact token for the list column
+	display string // Control Panel wording for user get
+	p       *api.CommonUserLoginPrivilege
 }
 
 // privilegeAreas lists the set privilege areas in a stable order.
 func privilegeAreas(p api.CommonUserLoginPrivileges) []privilegeArea {
 	all := []privilegeArea{
-		{"account", p.Account},
-		{"ai-gateway", p.AiGateway},
-		{"application", p.Application},
-		{"invoice", p.Invoice},
-		{"monitoring", p.Monitoring},
-		{"openstack", p.Openstack},
-		{"users", p.Users},
+		{"account", "Account", p.Account},
+		{"ai-gateway", "AI Gateway", p.AiGateway},
+		{"application", "Application", p.Application},
+		{"invoice", "Invoice", p.Invoice},
+		{"monitoring", "Monitoring", p.Monitoring},
+		{"openstack", "OpenStack", p.Openstack},
+		{"users", "Users", p.Users},
 	}
 	set := all[:0]
 	for _, area := range all {
@@ -242,16 +250,24 @@ func privilegeAreas(p api.CommonUserLoginPrivileges) []privilegeArea {
 	return set
 }
 
-// rolesSummary renders a compact privilege overview: "admin" for account
-// administrators, otherwise area:type pairs ("openstack:project(3)" counts
-// per-project grants), or "-" when no privileges are set.
-func rolesSummary(admin bool, p api.CommonUserLoginPrivileges) string {
-	if admin {
-		return "admin"
-	}
+// rolesSummary renders a compact privilege overview for the list column:
+// area:type pairs ("openstack:project(3)" counts per-project grants),
+// compressed to "full (all areas)" when every area is full access, or "-"
+// when no privileges are set. The admin flag has its own column.
+func rolesSummary(p api.CommonUserLoginPrivileges) string {
 	areas := privilegeAreas(p)
 	if len(areas) == 0 {
 		return "-"
+	}
+	allFull := len(areas) == 7
+	for _, area := range areas {
+		if area.p.Type != api.Full {
+			allFull = false
+			break
+		}
+	}
+	if allFull {
+		return "full (all areas)"
 	}
 	parts := make([]string, 0, len(areas))
 	for _, area := range areas {
@@ -262,4 +278,23 @@ func rolesSummary(admin bool, p api.CommonUserLoginPrivileges) string {
 		parts = append(parts, entry)
 	}
 	return strings.Join(parts, " ")
+}
+
+// privilegeLabel renders one area's access level in the Control Panel's
+// vocabulary.
+func privilegeLabel(p *api.CommonUserLoginPrivilege) string {
+	switch p.Type {
+	case api.Full:
+		return "Full Access"
+	case api.Read:
+		return "Read Access"
+	case api.Project:
+		n := 0
+		if p.ProjectPrivileges != nil {
+			n = len(*p.ProjectPrivileges)
+		}
+		return fmt.Sprintf("Project Access (%d projects)", n)
+	default:
+		return string(p.Type)
+	}
 }

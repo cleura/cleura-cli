@@ -15,14 +15,11 @@ func privilege(t api.UserUserLoginPrivilegeType, projects ...api.CommonUserLogin
 }
 
 func TestRolesSummary(t *testing.T) {
-	if got := rolesSummary(true, api.CommonUserLoginPrivileges{}); got != "admin" {
-		t.Errorf("admin summary = %q", got)
-	}
-	if got := rolesSummary(false, api.CommonUserLoginPrivileges{}); got != "-" {
+	if got := rolesSummary(api.CommonUserLoginPrivileges{}); got != "-" {
 		t.Errorf("empty summary = %q", got)
 	}
 
-	got := rolesSummary(false, api.CommonUserLoginPrivileges{
+	got := rolesSummary(api.CommonUserLoginPrivileges{
 		Invoice:   privilege(api.Read),
 		Openstack: privilege(api.Project, api.CommonUserLoginProjectPrivilege{ProjectId: "p1", Type: api.Full}, api.CommonUserLoginProjectPrivilege{ProjectId: "p2", Type: api.Read}),
 		Users:     privilege(api.Full),
@@ -30,6 +27,26 @@ func TestRolesSummary(t *testing.T) {
 	want := "invoice:read openstack:project(2) users:full"
 	if got != want {
 		t.Errorf("summary = %q, want %q", got, want)
+	}
+
+	// Every area at full access compresses (the typical administrator).
+	full := api.CommonUserLoginPrivileges{
+		Account: privilege(api.Full), AiGateway: privilege(api.Full),
+		Application: privilege(api.Full), Invoice: privilege(api.Full),
+		Monitoring: privilege(api.Full), Openstack: privilege(api.Full),
+		Users: privilege(api.Full),
+	}
+	if got := rolesSummary(full); got != "full (all areas)" {
+		t.Errorf("all-full summary = %q", got)
+	}
+}
+
+func TestPrivilegeLabel(t *testing.T) {
+	if got := privilegeLabel(privilege(api.Full)); got != "Full Access" {
+		t.Errorf("full = %q", got)
+	}
+	if got := privilegeLabel(privilege(api.Project, api.CommonUserLoginProjectPrivilege{}, api.CommonUserLoginProjectPrivilege{})); got != "Project Access (2 projects)" {
+		t.Errorf("project = %q", got)
 	}
 }
 
