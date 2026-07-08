@@ -129,7 +129,7 @@ Environment variables (shared with the
 | `CLEURA_REGION`       | OpenStack region (e.g. `sto1`)                 |
 | `CLEURA_PROJECT_ID`   | OpenStack project ID                           |
 | `CLEURA_PROFILE`      | Profile to use                                 |
-| `CLEURA_CONFIG`       | Config file path override                      |
+| `CLEURA_CONFIG`       | Config file path override (use an absolute path: relative paths resolve against each process's own working directory) |
 
 Global flags: `--profile`, `--cloud`, `--api-url`, `--region`, `--project-id`,
 `--output/-o` (table, json, yaml), `--quiet/-q` (suppress informational messages;

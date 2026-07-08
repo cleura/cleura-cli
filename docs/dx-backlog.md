@@ -119,6 +119,22 @@ pattern, which would also cover passkeys and future SSO), not native CTAP2
 (CGO, per-OS authenticator APIs, no passkey access). Documented workaround:
 Control Panel token + `login --token-stdin`.
 
+## Integration review — 2026-07-08 (provider ↔ CLI seam, round 2)
+
+Three-reviewer pass over the credential seam after the provider integration
+landed; 23 findings, all confirmed items fixed the same day (CLI commit
+4e9dbd4, provider commit 6059b74): env-stripped subprocess (tier 3 reflects
+CLI state only), --validate no longer maps 5xx to "no credentials",
+unresolvable endpoints exit 2 for chain callers, mixed-pair and
+endpoint-override warnings on stderr, private-cloud logins no longer persist
+the default cloud, live env URLs outrank stored pairings, signal-race exit
+codes preserved, unknown-guards for profile/use_cli, v0.1.0 "unknown command"
+detection, stderr surfacing, exit-2 reason threading, stringOrEnv empty-string
+fallthrough. Accepted residual risks (documented, not coded): credentials are
+snapshotted at Configure for the provider's lifetime (token expiring mid-apply
+fails at the resource call), and a relative CLEURA_CONFIG resolves per-process
+(README says use absolute paths).
+
 ## API-side asks — bundle into one ticket for the REST team
 
 - [ ] admin-kubeconfig responds `Content-Type: text/html` for a YAML body (spec
