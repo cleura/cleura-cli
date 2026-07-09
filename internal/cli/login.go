@@ -170,7 +170,7 @@ token with --token-stdin (validated before storing).`,
 
 			opts.infof(cmd, "Logged in as %s (profile %q, %s)", username, settings.ProfileName, url)
 			if previous != "" && previous != settings.ProfileName {
-				opts.infof(cmd, "Current profile is now %q (was %q); switch back with 'cleura config use-profile %s'", settings.ProfileName, previous, previous)
+				opts.infof(cmd, "Current profile is now %q (was %q); switch back with 'cleura config profile use %s'", settings.ProfileName, previous, previous)
 			}
 			return nil
 		},

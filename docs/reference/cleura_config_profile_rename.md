@@ -1,21 +1,27 @@
-## cleura config use-profile
+## cleura config profile rename
 
-Set the current profile
+Rename a profile
+
+### Synopsis
+
+Rename a profile, keeping its stored token and settings (the token
+belongs to the same account, so no re-login is needed). current_profile follows
+the rename. Refuses if the new name already exists.
 
 ```
-cleura config use-profile <name> [flags]
+cleura config profile rename <old> <new> [flags]
 ```
 
 ### Examples
 
 ```
-  cleura config use-profile compliant
+  cleura config profile rename default work
 ```
 
 ### Options
 
 ```
-  -h, --help   help for use-profile
+  -h, --help   help for rename
 ```
 
 ### Options inherited from parent commands
@@ -30,5 +36,5 @@ cleura config use-profile <name> [flags]
 
 ### SEE ALSO
 
-* [cleura config](cleura_config.md)	 - Manage CLI configuration and profiles
+* [cleura config profile](cleura_config_profile.md)	 - Manage named profiles (list, use, set, rename, delete)
 

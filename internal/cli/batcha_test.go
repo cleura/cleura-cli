@@ -34,7 +34,7 @@ func TestConfigSetEmptyValueMissingProfileNoop(t *testing.T) {
 	if err := os.WriteFile(path, []byte("version: 1\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, _, err := runCLICapture(t, path, nil, "config", "set", "region", "", "--profile", "ghost")
+	_, _, err := runCLICapture(t, path, nil, "config", "profile", "set", "region", "", "--profile", "ghost")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

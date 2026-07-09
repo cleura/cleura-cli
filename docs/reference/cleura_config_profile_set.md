@@ -1,4 +1,4 @@
-## cleura config set
+## cleura config profile set
 
 Set a profile value without logging in again
 
@@ -9,15 +9,15 @@ An empty value ("") removes the stored value. Tokens cannot be set here; use
 'cleura login' (or 'cleura login --token-stdin').
 
 ```
-cleura config set <key> <value> [flags]
+cleura config profile set <key> <value> [flags]
 ```
 
 ### Examples
 
 ```
-  cleura config set region kna1
-  cleura config set project_id a1b2c3
-  cleura config set --profile acme api_url https://rest.cloud.acme.example
+  cleura config profile set region kna1
+  cleura config profile set project_id a1b2c3
+  cleura config profile set --profile acme api_url https://rest.cloud.acme.example
 ```
 
 ### Options
@@ -38,5 +38,5 @@ cleura config set <key> <value> [flags]
 
 ### SEE ALSO
 
-* [cleura config](cleura_config.md)	 - Manage CLI configuration and profiles
+* [cleura config profile](cleura_config_profile.md)	 - Manage named profiles (list, use, set, rename, delete)
 

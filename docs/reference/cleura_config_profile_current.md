@@ -1,27 +1,27 @@
-## cleura config delete-profile
+## cleura config profile current
 
-Remove a profile from the configuration
+Print the profile the next command would use
 
 ### Synopsis
 
-Remove a profile from the configuration file. A stored token is revoked
-server-side first (best effort — the profile is deleted even when revocation
-fails, and the warning says so).
+Print the name of the profile that commands resolve to right now
+(--profile / $CLEURA_PROFILE / current_profile / "default"), without a network
+call — the quick answer to "which profile am I on?".
 
 ```
-cleura config delete-profile <name> [flags]
+cleura config profile current [flags]
 ```
 
 ### Examples
 
 ```
-  cleura config delete-profile old-test
+  cleura config profile current
 ```
 
 ### Options
 
 ```
-  -h, --help   help for delete-profile
+  -h, --help   help for current
 ```
 
 ### Options inherited from parent commands
@@ -36,5 +36,5 @@ cleura config delete-profile <name> [flags]
 
 ### SEE ALSO
 
-* [cleura config](cleura_config.md)	 - Manage CLI configuration and profiles
+* [cleura config profile](cleura_config_profile.md)	 - Manage named profiles (list, use, set, rename, delete)
 

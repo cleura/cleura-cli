@@ -198,7 +198,7 @@ func (o *globalOptions) clientOptions() []api.ClientOption {
 func (o *globalOptions) authenticatedClient(s config.Settings) (*cleura.Client, error) {
 	if s.Token == "" {
 		if !s.ProfileExists && s.ProfileName != "default" {
-			return nil, fmt.Errorf("profile %q does not exist; run 'cleura config list-profiles' to see profiles, or 'cleura login --profile %s' to create it", s.ProfileName, s.ProfileName)
+			return nil, fmt.Errorf("profile %q does not exist; run 'cleura config profile list' to see profiles, or 'cleura login --profile %s' to create it", s.ProfileName, s.ProfileName)
 		}
 		return nil, fmt.Errorf("not logged in (profile %q); run 'cleura login' or set CLEURA_API_USERNAME and CLEURA_API_TOKEN", s.ProfileName)
 	}

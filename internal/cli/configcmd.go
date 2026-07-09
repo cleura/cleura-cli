@@ -22,12 +22,29 @@ func newConfigCommand(opts *globalOptions) *cobra.Command {
 	}
 	cmd.AddCommand(
 		newConfigViewCommand(opts),
-		newConfigCurrentCommand(opts),
-		newConfigSetCommand(opts),
 		newConfigPathCommand(),
 		newGetCredentialsCommand(opts),
-		newUseProfileCommand(opts),
+		newProfileCommand(opts),
+	)
+	return cmd
+}
+
+// newProfileCommand groups the profile-management verbs under
+// 'cleura config profile', matching the noun-verb shape of 'gardener shoot'
+// and 'user'. (Whole-config commands — view, path, get-credentials — stay at
+// the config level.)
+func newProfileCommand(opts *globalOptions) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "profile",
+		Short: "Manage named profiles (list, use, set, rename, delete)",
+		Args:  cobra.NoArgs,
+		RunE:  groupHelp,
+	}
+	cmd.AddCommand(
 		newListProfilesCommand(opts),
+		newConfigCurrentCommand(opts),
+		newUseProfileCommand(opts),
+		newConfigSetCommand(opts),
 		newRenameProfileCommand(opts),
 		newDeleteProfileCommand(opts),
 	)
@@ -159,7 +176,7 @@ func newConfigSetCommand(opts *globalOptions) *cobra.Command {
 		Long: fmt.Sprintf(`Set one value in the selected profile. Keys: %s.
 An empty value ("") removes the stored value. Tokens cannot be set here; use
 'cleura login' (or 'cleura login --token-stdin').`, strings.Join(keys, ", ")),
-		Example: "  cleura config set region kna1\n  cleura config set project_id a1b2c3\n  cleura config set --profile acme api_url https://rest.cloud.acme.example",
+		Example: "  cleura config profile set region kna1\n  cleura config profile set project_id a1b2c3\n  cleura config profile set --profile acme api_url https://rest.cloud.acme.example",
 		Args:    cobra.ExactArgs(2),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			if len(args) == 0 {
@@ -236,7 +253,7 @@ func newConfigCurrentCommand(opts *globalOptions) *cobra.Command {
 		Long: `Print the name of the profile that commands resolve to right now
 (--profile / $CLEURA_PROFILE / current_profile / "default"), without a network
 call — the quick answer to "which profile am I on?".`,
-		Example: "  cleura config current",
+		Example: "  cleura config profile current",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, s, err := opts.settings()
@@ -251,12 +268,12 @@ call — the quick answer to "which profile am I on?".`,
 
 func newRenameProfileCommand(opts *globalOptions) *cobra.Command {
 	return &cobra.Command{
-		Use:   "rename-profile <old> <new>",
+		Use:   "rename <old> <new>",
 		Short: "Rename a profile",
 		Long: `Rename a profile, keeping its stored token and settings (the token
 belongs to the same account, so no re-login is needed). current_profile follows
 the rename. Refuses if the new name already exists.`,
-		Example:           "  cleura config rename-profile default work",
+		Example:           "  cleura config profile rename default work",
 		Args:              cobra.ExactArgs(2),
 		ValidArgsFunction: completeProfileNameArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -294,9 +311,9 @@ the rename. Refuses if the new name already exists.`,
 
 func newUseProfileCommand(opts *globalOptions) *cobra.Command {
 	return &cobra.Command{
-		Use:               "use-profile <name>",
+		Use:               "use <name>",
 		Short:             "Set the current profile",
-		Example:           "  cleura config use-profile compliant",
+		Example:           "  cleura config profile use compliant",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeProfileNameArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -337,9 +354,9 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "list-profiles",
+		Use:     "list",
 		Short:   "List configured profiles",
-		Example: "  cleura config list-profiles\n  cleura config list-profiles -o json   # tokens are never included",
+		Example: "  cleura config profile list\n  cleura config profile list -o json   # tokens are never included",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
@@ -410,12 +427,12 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 
 func newDeleteProfileCommand(opts *globalOptions) *cobra.Command {
 	return &cobra.Command{
-		Use:   "delete-profile <name>",
+		Use:   "delete <name>",
 		Short: "Remove a profile from the configuration",
 		Long: `Remove a profile from the configuration file. A stored token is revoked
 server-side first (best effort — the profile is deleted even when revocation
 fails, and the warning says so).`,
-		Example:           "  cleura config delete-profile old-test",
+		Example:           "  cleura config profile delete old-test",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeProfileNameArg,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -452,9 +469,9 @@ fails, and the warning says so).`,
 				switch remaining := cfg.ProfileNames(); len(remaining) {
 				case 0:
 				case 1:
-					opts.infof(cmd, "No current profile; select the remaining one with 'cleura config use-profile %s'", remaining[0])
+					opts.infof(cmd, "No current profile; select the remaining one with 'cleura config profile use %s'", remaining[0])
 				default:
-					opts.infof(cmd, "No current profile; select one with 'cleura config use-profile <name>' (%s)", strings.Join(remaining, ", "))
+					opts.infof(cmd, "No current profile; select one with 'cleura config profile use <name>' (%s)", strings.Join(remaining, ", "))
 				}
 			}
 			return nil

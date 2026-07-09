@@ -1,27 +1,23 @@
-## cleura config current
+## cleura config profile list
 
-Print the profile the next command would use
-
-### Synopsis
-
-Print the name of the profile that commands resolve to right now
-(--profile / $CLEURA_PROFILE / current_profile / "default"), without a network
-call — the quick answer to "which profile am I on?".
+List configured profiles
 
 ```
-cleura config current [flags]
+cleura config profile list [flags]
 ```
 
 ### Examples
 
 ```
-  cleura config current
+  cleura config profile list
+  cleura config profile list -o json   # tokens are never included
 ```
 
 ### Options
 
 ```
-  -h, --help   help for current
+  -h, --help            help for list
+  -o, --output string   Output format: table, json, yaml (default "table")
 ```
 
 ### Options inherited from parent commands
@@ -36,5 +32,5 @@ cleura config current [flags]
 
 ### SEE ALSO
 
-* [cleura config](cleura_config.md)	 - Manage CLI configuration and profiles
+* [cleura config profile](cleura_config_profile.md)	 - Manage named profiles (list, use, set, rename, delete)
 

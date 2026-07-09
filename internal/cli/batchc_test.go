@@ -33,11 +33,11 @@ func writeConfig(t *testing.T, yaml string) string {
 
 func TestConfigCurrent(t *testing.T) {
 	path := writeConfig(t, twoProfiles)
-	out, _, err := runCLICapture(t, path, nil, "config", "current")
+	out, _, err := runCLICapture(t, path, nil, "config", "profile", "current")
 	if err != nil || strings.TrimSpace(out) != "work" {
 		t.Fatalf("config current = %q, %v; want work", out, err)
 	}
-	out, _, err = runCLICapture(t, path, map[string]string{"CLEURA_PROFILE": "spare"}, "config", "current")
+	out, _, err = runCLICapture(t, path, map[string]string{"CLEURA_PROFILE": "spare"}, "config", "profile", "current")
 	if err != nil || strings.TrimSpace(out) != "spare" {
 		t.Fatalf("config current (env override) = %q, %v; want spare", out, err)
 	}
@@ -45,7 +45,7 @@ func TestConfigCurrent(t *testing.T) {
 
 func TestRenameProfile(t *testing.T) {
 	path := writeConfig(t, twoProfiles)
-	if _, _, err := runCLICapture(t, path, nil, "config", "rename-profile", "work", "primary"); err != nil {
+	if _, _, err := runCLICapture(t, path, nil, "config", "profile", "rename", "work", "primary"); err != nil {
 		t.Fatalf("rename: %v", err)
 	}
 	data, _ := os.ReadFile(path)
@@ -53,10 +53,10 @@ func TestRenameProfile(t *testing.T) {
 	if strings.Contains(s, "work:") || !strings.Contains(s, "primary:") || !strings.Contains(s, "current_profile: primary") {
 		t.Errorf("rename did not rekey and follow current_profile:\n%s", s)
 	}
-	if _, _, err := runCLICapture(t, path, nil, "config", "rename-profile", "spare", "primary"); err == nil || !strings.Contains(err.Error(), "already exists") {
+	if _, _, err := runCLICapture(t, path, nil, "config", "profile", "rename", "spare", "primary"); err == nil || !strings.Contains(err.Error(), "already exists") {
 		t.Errorf("rename to existing should refuse, got %v", err)
 	}
-	if _, _, err := runCLICapture(t, path, nil, "config", "rename-profile", "ghost", "x"); err == nil || !strings.Contains(err.Error(), "does not exist") {
+	if _, _, err := runCLICapture(t, path, nil, "config", "profile", "rename", "ghost", "x"); err == nil || !strings.Contains(err.Error(), "does not exist") {
 		t.Errorf("rename of missing should refuse, got %v", err)
 	}
 }
@@ -64,12 +64,12 @@ func TestRenameProfile(t *testing.T) {
 func TestConfigSetSignals(t *testing.T) {
 	path := writeConfig(t, twoProfiles)
 	// Creating a profile is announced.
-	_, stderr, err := runCLICapture(t, path, nil, "config", "set", "region", "kna1", "--profile", "brandnew")
+	_, stderr, err := runCLICapture(t, path, nil, "config", "profile", "set", "region", "kna1", "--profile", "brandnew")
 	if err != nil || !strings.Contains(stderr, `Created profile "brandnew"`) {
 		t.Errorf("set on a new profile should announce creation; stderr=%q err=%v", stderr, err)
 	}
 	// Changing username on a profile with a token warns about desync.
-	_, stderr, err = runCLICapture(t, path, nil, "config", "set", "username", "carol", "--profile", "work")
+	_, stderr, err = runCLICapture(t, path, nil, "config", "profile", "set", "username", "carol", "--profile", "work")
 	if err != nil || !strings.Contains(stderr, "mismatched") {
 		t.Errorf("changing username on a token profile should warn; stderr=%q err=%v", stderr, err)
 	}
@@ -77,11 +77,11 @@ func TestConfigSetSignals(t *testing.T) {
 
 func TestDeleteCurrentProfileHints(t *testing.T) {
 	path := writeConfig(t, twoProfiles)
-	_, stderr, err := runCLICapture(t, path, nil, "config", "delete-profile", "work")
+	_, stderr, err := runCLICapture(t, path, nil, "config", "profile", "delete", "work")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(stderr, "use-profile spare") {
+	if !strings.Contains(stderr, "config profile use spare") {
 		t.Errorf("deleting the current profile should hint at the remaining one; stderr=%q", stderr)
 	}
 }
@@ -134,7 +134,7 @@ func TestListProfilesNoSpuriousOverrideNote(t *testing.T) {
 	// current_profile empty + no override: there is nothing to override, so
 	// no "selected for this run" note (regression from Batch C).
 	path := writeConfig(t, "version: 1\nprofiles:\n  only:\n    cloud: public\n    username: u\n")
-	_, stderr, err := runCLICapture(t, path, nil, "config", "list-profiles")
+	_, stderr, err := runCLICapture(t, path, nil, "config", "profile", "list")
 	if err != nil {
 		t.Fatal(err)
 	}

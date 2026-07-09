@@ -81,15 +81,15 @@ Working with more than one cloud is a matter of profiles:
 ```sh
 cleura login --profile compliant --cloud compliant   # log in to a separate profile — it becomes current
 cleura --profile production whoami                   # one-off use of another profile
-cleura config use-profile production                 # switch the current profile without logging in
-cleura config current                                # which profile am I on?
-cleura config list-profiles
-cleura config rename-profile production prod         # rename (keeps the token; current_profile follows)
-cleura config delete-profile compliant
+cleura config profile use production                 # switch the current profile without logging in
+cleura config profile current                                # which profile am I on?
+cleura config profile list
+cleura config profile rename production prod         # rename (keeps the token; current_profile follows)
+cleura config profile delete compliant
 ```
 
 Logging in always makes that profile the current one (the `az login`/`gcloud`
-convention); `config use-profile` switches between already-logged-in profiles.
+convention); `config profile use` switches between already-logged-in profiles.
 
 When in doubt about what a command will actually use, `cleura config view` shows the
 effective settings and the source of each value (flag, `$CLEURA_*` variable, profile,
@@ -147,8 +147,8 @@ commands that render output; `--region` and `--project-id` on `gardener` command
 Profile values can be changed without re-logging in:
 
 ```sh
-cleura config set region kna1
-cleura config set project_id a1b2c3
+cleura config profile set region kna1
+cleura config profile set project_id a1b2c3
 cleura config path                     # where the config file lives
 ```
 

@@ -23,7 +23,7 @@ func TestFlagPlacement(t *testing.T) {
 
 	// config view also accepts them — it previews how any setting resolves.
 	regionUsers := [][]string{{"gardener", "shoot", "list"}, {"gardener", "shoot", "wake"}, {"login"}, {"config", "view"}}
-	regionNonUsers := [][]string{{"whoami"}, {"logout"}, {"user", "list"}, {"config", "set"}}
+	regionNonUsers := [][]string{{"whoami"}, {"logout"}, {"user", "list"}, {"config", "profile", "set"}}
 	for _, p := range regionUsers {
 		if !has(at(p...), "region") || !has(at(p...), "project-id") {
 			t.Errorf("%v should have --region/--project-id", p)
@@ -35,8 +35,8 @@ func TestFlagPlacement(t *testing.T) {
 		}
 	}
 
-	outputRenderers := [][]string{{"whoami"}, {"version"}, {"user", "list"}, {"user", "get"}, {"gardener", "shoot", "list"}, {"config", "view"}, {"config", "list-profiles"}}
-	outputNonRenderers := [][]string{{"login"}, {"logout"}, {"config", "set"}, {"config", "use-profile"}, {"config", "delete-profile"}, {"config", "path"}, {"config", "get-credentials"}}
+	outputRenderers := [][]string{{"whoami"}, {"version"}, {"user", "list"}, {"user", "get"}, {"gardener", "shoot", "list"}, {"config", "view"}, {"config", "profile", "list"}}
+	outputNonRenderers := [][]string{{"login"}, {"logout"}, {"config", "profile", "set"}, {"config", "profile", "use"}, {"config", "profile", "delete"}, {"config", "path"}, {"config", "get-credentials"}}
 	for _, p := range outputRenderers {
 		if !has(at(p...), "output") {
 			t.Errorf("%v should have -o/--output", p)

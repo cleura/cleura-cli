@@ -1,23 +1,27 @@
-## cleura config list-profiles
+## cleura config profile delete
 
-List configured profiles
+Remove a profile from the configuration
+
+### Synopsis
+
+Remove a profile from the configuration file. A stored token is revoked
+server-side first (best effort — the profile is deleted even when revocation
+fails, and the warning says so).
 
 ```
-cleura config list-profiles [flags]
+cleura config profile delete <name> [flags]
 ```
 
 ### Examples
 
 ```
-  cleura config list-profiles
-  cleura config list-profiles -o json   # tokens are never included
+  cleura config profile delete old-test
 ```
 
 ### Options
 
 ```
-  -h, --help            help for list-profiles
-  -o, --output string   Output format: table, json, yaml (default "table")
+  -h, --help   help for delete
 ```
 
 ### Options inherited from parent commands
@@ -32,5 +36,5 @@ cleura config list-profiles [flags]
 
 ### SEE ALSO
 
-* [cleura config](cleura_config.md)	 - Manage CLI configuration and profiles
+* [cleura config profile](cleura_config_profile.md)	 - Manage named profiles (list, use, set, rename, delete)
 
