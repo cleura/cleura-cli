@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -170,7 +171,15 @@ func newUserGetCommand(opts *globalOptions) *cobra.Command {
 // so whoami's own 403 and gardener 403s are not given this hint.
 func userAuthError(op string, s config.Settings, resp *http.Response, body []byte) error {
 	err := apiAuthError(op, s, resp, body)
-	if resp.StatusCode == http.StatusForbidden && !strings.Contains(strings.ToLower(string(body)), "token") {
+	if resp.StatusCode != http.StatusForbidden {
+		return err
+	}
+	// Judge by the API's own message (the field apiAuthError also keys on),
+	// so the two agree: a token failure — or a 403 with no message to judge
+	// by — gets the re-login hint from apiAuthError, not this one. A real
+	// authorization message ("No access: ...") gets the privilege hint.
+	var e api.FrameworkHttpErrorResponse
+	if json.Unmarshal(body, &e) == nil && e.Error.Message != "" && !strings.Contains(strings.ToLower(e.Error.Message), "token") {
 		return fmt.Errorf("%w\nthis needs the 'users' privilege; to view your own account use 'cleura whoami'", err)
 	}
 	return err

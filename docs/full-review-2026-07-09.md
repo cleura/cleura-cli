@@ -126,6 +126,8 @@ _Done 2026-07-09, with regression tests. Adds `config current` and `config renam
   `shoot list` (add to wake/hibernate/reconcile/kubeconfig or the parent); `reconcile` and
   `user get` help too thin; getting-started block runs `logout` mid-sequence; state that
   only `get-credentials` (and `config view -o json`) are stable script contracts.
+- [] ** Commands / Subcommnds that require project and region to be set should expose it in the help text *
+    cleura gardener --help folr exampel do not expose any text that indicates that project-id and region has to be set in profile or via flags
 
 ## Refuted (for the record)
 - "All-digit usernames are unreachable / resolve to the wrong user" — accurate mechanism

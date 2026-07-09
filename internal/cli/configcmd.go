@@ -355,7 +355,10 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 			if _, ok := cfg.Profiles[cfg.CurrentProfile]; cfg.CurrentProfile != "" && !ok {
 				fmt.Fprintf(cmd.ErrOrStderr(), "warning: current_profile %q does not exist in the config file\n", cfg.CurrentProfile)
 			}
-			if effective != current {
+			// Only when a real stored current exists and something selected a
+			// different one this run — not when current_profile is empty (there
+			// is nothing to override then, e.g. right after deleting it).
+			if current != "" && effective != current {
 				opts.infof(cmd, "selected for this run: %q (overrides current_profile %q)", effective, current)
 			}
 

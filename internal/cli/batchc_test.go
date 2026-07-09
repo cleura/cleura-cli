@@ -122,4 +122,23 @@ func TestUserAuthError(t *testing.T) {
 		strings.Contains(err.Error(), "whoami") || strings.Contains(err.Error(), "cleura login") {
 		t.Errorf("404 should carry neither hint: %v", err)
 	}
+
+	// A 403 with no parseable message must not get BOTH hints: with no
+	// reason to judge by, apiAuthError's login hint stands, no whoami.
+	if err := userAuthError("listing users", s, forbidden, []byte(``)); err == nil || strings.Contains(err.Error(), "whoami") {
+		t.Errorf("message-less 403 should not add the whoami hint: %v", err)
+	}
+}
+
+func TestListProfilesNoSpuriousOverrideNote(t *testing.T) {
+	// current_profile empty + no override: there is nothing to override, so
+	// no "selected for this run" note (regression from Batch C).
+	path := writeConfig(t, "version: 1\nprofiles:\n  only:\n    cloud: public\n    username: u\n")
+	_, stderr, err := runCLICapture(t, path, nil, "config", "list-profiles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(stderr, "selected for this run") {
+		t.Errorf("no override present; must not print an override note; stderr=%q", stderr)
+	}
 }
