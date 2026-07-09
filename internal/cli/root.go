@@ -35,7 +35,9 @@ type globalOptions struct {
 }
 
 func NewRootCommand(version string) *cobra.Command {
-	opts := &globalOptions{version: version}
+	// output defaults to table; commands that don't render never bind the
+	// -o flag, so this is the value they carry (harmlessly) too.
+	opts := &globalOptions{version: version, output: "table"}
 
 	root := &cobra.Command{
 		Use:   "cleura",
@@ -61,13 +63,15 @@ from.`,
 		},
 	}
 
+	// Genuinely global: every command reads a profile and resolves an
+	// endpoint; --debug/--quiet are cross-cutting. --region/--project-id and
+	// -o are NOT global — they are attached only to the commands that use
+	// them (gardener + login store the former; renderers take the latter),
+	// so they never appear on commands that would silently ignore them.
 	pf := root.PersistentFlags()
 	pf.StringVar(&opts.profile, "profile", "", "Configuration profile to use [$CLEURA_PROFILE] (default from config, or \"default\")")
 	pf.StringVar(&opts.cloud, "cloud", "", "Named cloud with a predefined API URL: public or compliant [$CLEURA_CLOUD]")
 	pf.StringVar(&opts.apiURL, "api-url", "", "Cleura API base URL, required for private clouds; overrides --cloud [$CLEURA_API_URL]")
-	pf.StringVar(&opts.region, "region", "", "OpenStack region (e.g. sto1) [$CLEURA_REGION]")
-	pf.StringVar(&opts.projectID, "project-id", "", "OpenStack project ID [$CLEURA_PROJECT_ID]")
-	pf.StringVarP(&opts.output, "output", "o", "table", "Output format: "+output.Formats)
 	pf.BoolVar(&opts.debug, "debug", false, "Log HTTP requests and responses to stderr (credentials redacted)")
 	pf.BoolVarP(&opts.quiet, "quiet", "q", false, "Suppress informational messages; errors and requested output are still shown")
 
@@ -85,15 +89,35 @@ from.`,
 		newVersionCommand(opts),
 	)
 
-	_ = root.RegisterFlagCompletionFunc("output", cobra.FixedCompletions(output.FormatList, cobra.ShellCompDirectiveNoFileComp))
 	_ = root.RegisterFlagCompletionFunc("cloud", cobra.FixedCompletions([]string{"public", "compliant"}, cobra.ShellCompDirectiveNoFileComp))
 	_ = root.RegisterFlagCompletionFunc("profile", completeProfileNames)
 
 	return root
 }
 
+// addOutputFlag attaches -o/--output (and its completion) to a command that
+// renders structured output. It is deliberately not global: action-only
+// commands ignore output formatting, and offering the flag there is
+// misleading. All render commands bind the same opts.output field.
+func addOutputFlag(cmd *cobra.Command, opts *globalOptions) {
+	cmd.Flags().StringVarP(&opts.output, "output", "o", "table", "Output format: "+output.Formats)
+	_ = cmd.RegisterFlagCompletionFunc("output", cobra.FixedCompletions(output.FormatList, cobra.ShellCompDirectiveNoFileComp))
+}
+
+// addProjectContextFlags attaches --region/--project-id to a command. They
+// are not global: only gardener (persistent, inherited by its subcommands)
+// uses them at call time, and login (local) stores them in the profile.
+func addProjectContextFlags(cmd *cobra.Command, opts *globalOptions, persistent bool) {
+	fs := cmd.Flags()
+	if persistent {
+		fs = cmd.PersistentFlags()
+	}
+	fs.StringVar(&opts.region, "region", "", "OpenStack region (e.g. sto1) [$CLEURA_REGION]")
+	fs.StringVar(&opts.projectID, "project-id", "", "OpenStack project ID [$CLEURA_PROJECT_ID]")
+}
+
 func newVersionCommand(opts *globalOptions) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Show the cleura version",
 		Args:  cobra.NoArgs,
@@ -107,6 +131,8 @@ func newVersionCommand(opts *globalOptions) *cobra.Command {
 			})
 		},
 	}
+	addOutputFlag(cmd, opts)
+	return cmd
 }
 
 // groupHelp is the RunE for parent commands that only route to subcommands.

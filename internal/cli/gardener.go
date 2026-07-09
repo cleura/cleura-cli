@@ -34,6 +34,11 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE:  groupHelp,
 	}
+	// Region/project are needed by every gardener call; persistent here so
+	// all shoot subcommands inherit them (and they no longer clutter
+	// unrelated commands as global flags).
+	addProjectContextFlags(cmd, opts, true)
+
 	shoot.AddCommand(
 		newShootListCommand(opts),
 		newShootKubeconfigCommand(opts),
@@ -100,7 +105,7 @@ func gardenerContext(opts *globalOptions) (config.Settings, *cleura.Client, erro
 }
 
 func newShootListCommand(opts *globalOptions) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List shoot clusters in a project",
 		Long: `List shoot clusters in a project. A region and project must be selected:
@@ -185,6 +190,8 @@ profile at login.`,
 			})
 		},
 	}
+	addOutputFlag(cmd, opts)
+	return cmd
 }
 
 func newShootKubeconfigCommand(opts *globalOptions) *cobra.Command {

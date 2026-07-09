@@ -69,14 +69,16 @@ Fix soon:
 
 ## Batch B — flag scoping & `-o` placement (highest-leverage DX, low risk)
 
-- [ ] **`--region` / `--project-id` are global but no-ops on `whoami`, `user`, `logout`**
+_Done 2026-07-09: --region/--project-id scoped to gardener+login, -o to render commands only, with a flag-placement regression test. The --version/-o divergence is resolved by construction (-o is no longer a root flag)._
+
+- [x] **`--region` / `--project-id` are global but no-ops on `whoami`, `user`, `logout`**
   (accepted, exit 0, silently ignored). Scope them to `gardener` (persistent flags on the
   gardener command) while keeping `login` able to store them. ~2 flag registrations, zero
   resolver changes.
-- [ ] **`-o/--output` is offered on ~7 side-effect commands** (`login`, `logout`,
+- [x] **`-o/--output` is offered on ~7 side-effect commands** (`login`, `logout`,
   `config set/use-profile/delete-profile/path`) where it's a silent no-op (`-o json`
   ignored, `-o bogus` rejected). Attach `-o` only to commands that call `output.Render`.
-- [ ] **`--version` (plaintext) vs `version` subcommand (honors `-o`)** diverge — low
+- [x] **`--version` (plaintext) vs `version` subcommand (honors `-o`)** diverge — low
   scriptability wart; make the flag path render through the same code.
 
 ## Batch C — profile & login ergonomics (flagship polish)

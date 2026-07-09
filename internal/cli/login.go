@@ -172,6 +172,9 @@ token with --token-stdin (validated before storing).`,
 
 	cmd.Flags().StringVarP(&username, "username", "u", "", "Username to log in with [$CLEURA_API_USERNAME]")
 	cmd.Flags().BoolVar(&tokenStdin, "token-stdin", false, "Read an existing API token from stdin and store it instead of logging in with a password")
+	// login stores region/project in the profile for later project-scoped
+	// commands; they are local here, not global.
+	addProjectContextFlags(cmd, opts, false)
 
 	return cmd
 }

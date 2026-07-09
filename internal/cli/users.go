@@ -29,7 +29,7 @@ func newUserCommand(opts *globalOptions) *cobra.Command {
 }
 
 func newUserListCommand(opts *globalOptions) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List the users in the account",
 		Long: `List the users in the account with their privileges. The PRIVILEGES column
@@ -87,10 +87,12 @@ rights on the logged-in account.`,
 			})
 		},
 	}
+	addOutputFlag(cmd, opts)
+	return cmd
 }
 
 func newUserGetCommand(opts *globalOptions) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "get <user-id or username>",
 		Short: "Show one user with the full privilege breakdown",
 		Example: `  cleura user get 4763
@@ -156,6 +158,8 @@ func newUserGetCommand(opts *globalOptions) *cobra.Command {
 			})
 		},
 	}
+	addOutputFlag(cmd, opts)
+	return cmd
 }
 
 // lookupUser fetches a user by ID, falling back to an exact username match

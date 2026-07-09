@@ -41,7 +41,7 @@ func newConfigViewCommand(opts *globalOptions) *cobra.Command {
 		Source  string `json:"source" yaml:"source"`
 	}
 
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "view",
 		Short: "Show the effective settings and where each value comes from",
 		Long: `Show the settings the next command would use, resolved with the usual
@@ -120,6 +120,8 @@ selected profile are pointed out on stderr. The token value is never shown.`,
 			})
 		},
 	}
+	addOutputFlag(cmd, opts)
+	return cmd
 }
 
 // settableKeys are the profile fields "config set" may write. The token is
@@ -250,7 +252,7 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 		LoggedIn  bool   `json:"logged_in" yaml:"logged_in"`
 	}
 
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "list-profiles",
 		Short:   "List configured profiles",
 		Example: "  cleura config list-profiles\n  cleura config list-profiles -o json   # tokens are never included",
@@ -308,6 +310,8 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 			})
 		},
 	}
+	addOutputFlag(cmd, opts)
+	return cmd
 }
 
 func newDeleteProfileCommand(opts *globalOptions) *cobra.Command {

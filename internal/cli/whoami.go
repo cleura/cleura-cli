@@ -9,7 +9,7 @@ import (
 )
 
 func newWhoamiCommand(opts *globalOptions) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "whoami",
 		Short:   "Show the currently authenticated user",
 		Example: "  cleura whoami\n  cleura whoami -o json",
@@ -46,4 +46,6 @@ func newWhoamiCommand(opts *globalOptions) *cobra.Command {
 			})
 		},
 	}
+	addOutputFlag(cmd, opts)
+	return cmd
 }

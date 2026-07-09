@@ -133,10 +133,14 @@ Environment variables (shared with the
 | `CLEURA_PROFILE`      | Profile to use                                 |
 | `CLEURA_CONFIG`       | Config file path override (use an absolute path: relative paths resolve against each process's own working directory) |
 
-Global flags: `--profile`, `--cloud`, `--api-url`, `--region`, `--project-id`,
-`--output/-o` (table, json, yaml), `--quiet/-q` (suppress informational messages;
-stdout carries only data, so pipes stay clean), `--debug` (log HTTP exchanges to
-stderr with credentials redacted).
+Global flags (on every command): `--profile`, `--cloud`, `--api-url`,
+`--quiet/-q` (suppress informational messages; stdout carries only data, so pipes
+stay clean), `--debug` (log HTTP exchanges to stderr with credentials redacted).
+
+Scoped flags, offered only where they apply: `--output/-o` (table, json, yaml) on
+commands that render output; `--region` and `--project-id` on `gardener` commands
+(and on `cleura login`, which stores them in the profile). Environment variables
+`CLEURA_REGION`/`CLEURA_PROJECT_ID` still apply everywhere they are relevant.
 
 Profile values can be changed without re-logging in:
 
