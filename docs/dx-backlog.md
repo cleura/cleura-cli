@@ -50,8 +50,8 @@ are current. Tick items as they land.
   leaves live credentials in the build directory.
 - [ ] Token concurrency in CI unverified: do parallel logins on one service
   account invalidate each other's tokens?
-- [ ] SDK README: state the v0.x versioning policy for the regenerating `api`
-  package; add private-module (GOPRIVATE) fetch instructions.
+- [x] SDK README: v0.x versioning policy stated; fetch instructions added
+  (client-go is now a PUBLIC repo, so plain `go get` — no GOPRIVATE needed). DONE.
 - [ ] generate.sh residue: `openapi_downgrade` unpinned; the `sed` transform is
   fragile line-oriented text surgery.
 - [ ] Project-ID discovery (`cleura project list`): sharpest week-one hole —
@@ -82,10 +82,11 @@ the README). In dependency order:
    exit 0 = credentials / exit 2 + JSON error = fall through / other = broken;
    optional --validate. Documented in README "Tool integration".
    *(Done 2026-07-08 with envelope/exit-code regression tests.)*
-4. [ ] Provider-side work: credential source "cli" with precedence
-   explicit > env > CLI, a `profile` attribute; bundle with migrating the
-   provider off its duplicated generated client onto cleura-client-go.
-   (See docs/provider-integration-plan.md Phases 1–2 — the next work item.)
+4. [x] Provider-side work: credential source "cli" (precedence HCL > env > CLI),
+   `profile`/`use_cli` attributes, and migration onto cleura-client-go — DONE on
+   branch `feat/shared-client-and-cli-auth` (provider repo), adversarially
+   reviewed. **Pending: push/PR/merge + a provider release.** Not yet on the
+   provider's main.
 
 Decision recorded: `internal/config` stays private; the subprocess is the boundary.
 
@@ -93,12 +94,14 @@ Decision recorded: `internal/config` stays private; the subprocess is the bounda
 
 - [ ] shootAction closures → store the generated raw method values (identical
   signatures) + one `io.ReadAll` in `newShootActionCommand`.
-- [ ] Move the UPGRADE cloud-profile fetch out of the table-render closure
-  (RunE, optionally concurrent); consider upgrade info in `-o json`.
+- [x] Move the UPGRADE cloud-profile fetch out of the table-render closure and
+  surface upgrade info in `-o json`. DONE Batch D (view model built before
+  output.Render; `upgrade_available`/`status_summary` in json/yaml).
 - [ ] cleura-client-go: `CreateShootAdminKubeconfig` helper owning the raw-body
   Content-Type workaround + a shared API-error type (CLI and provider both need it).
-- [ ] `login --api-url` only (no cloud anywhere) persists `cloud: public` into a
-  private-cloud profile; consider omitting cloud when its source is the default.
+- [x] `login --api-url` only no longer persists `cloud: public` into a
+  private-cloud profile. DONE Batch A (persistedEndpoint omits the cloud when it
+  is only the built-in default and an explicit URL is set).
 - [ ] Retries for idempotent GETs (provider's wait-loops prove transient failures).
 - [ ] Inline env-shadow warnings on authenticated commands (`config view`
   covers the read side today).
