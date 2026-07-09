@@ -296,6 +296,15 @@ three upgrade ops are the only Gardener ops taking a `*Params` struct (a require
 - **`bootstrap` sync vs async** — modeled as synchronous (204). If enablement is
   actually async, add a future `gardener project status` poll verb.
 
+**Positioning — decide before Batch C:**
+- This roadmap gives the CLI **full lifecycle CRUD** (`shoot create/edit/delete`,
+  `worker create/delete`), which **overlaps the terraform provider's role** and
+  crosses the earlier "CLI owns day-2, terraform owns lifecycle" split. The user
+  asked for full Gardener functionality, so the scope is intended — but confirm
+  the CLI is deliberately a full lifecycle manager, and plan the README/help
+  positioning update (when to reach for terraform vs the CLI) as part of Batch C.
+  The backend open questions above are **must-confirm-before-coding**, not settled.
+
 **Delivery:**
 - Batch E ships as E1 (worker) + E2 (upgrade) to keep the verification cadence —
   confirm that's preferred over one atomic XL batch.
