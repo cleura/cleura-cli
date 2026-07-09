@@ -4,6 +4,10 @@ Living tracker for CLI/SDK quality work. Regenerated 2026-07-08 (the original wa
 lost in a history rewrite); completed work is compressed to a summary, open items
 are current. Tick items as they land.
 
+> The 2026-07-09 full-CLI review (8 lenses, live-tested) has its own tracked file:
+> [full-review-2026-07-09.md](full-review-2026-07-09.md) — 11 verified bugs + flag/
+> placement + profile/login DX, organized into batches A–D.
+
 ## Done (compressed history)
 
 - **DX audit, 2026-07-06** (7 dimensions, 52 adversarially verified findings):
