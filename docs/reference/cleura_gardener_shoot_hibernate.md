@@ -2,6 +2,14 @@
 
 Hibernate a shoot cluster (scales workloads and control plane down)
 
+### Synopsis
+
+Hibernate a shoot cluster: scale its workloads and control plane down to save cost. Reversible with 'cleura gardener shoot wake'.
+
+A region and project must be selected for gardener commands: pass
+--region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
+profile with 'cleura login'.
+
 ```
 cleura gardener shoot hibernate <shoot-name> [flags]
 ```

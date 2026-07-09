@@ -4,10 +4,11 @@ Manage shoot clusters
 
 ### Synopsis
 
-Manage Gardener shoot (Kubernetes) clusters. Every shoot command is
-project-scoped: a region and project must be selected via --region/--project-id,
-the CLEURA_REGION/CLEURA_PROJECT_ID environment variables, or values stored in
-the profile at login.
+Manage Gardener shoot (Kubernetes) clusters.
+
+A region and project must be selected for gardener commands: pass
+--region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
+profile with 'cleura login'.
 
 ```
 cleura gardener shoot [flags]

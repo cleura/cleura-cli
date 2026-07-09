@@ -113,6 +113,12 @@ _Done 2026-07-09, with regression tests. Adds `config current` and `config renam
 
 _Done 2026-07-09. config profile restructure (no aliases, clean break); gardener list WORKERS→POOLS, Succeeded→"ready", computed columns now in -o json via an embedded view model; gardener commands check auth before region/project; kubeconfig validity wording; docs sweep (roles→privileges, reconcile/user-get help, shoot region/project prerequisite, getting-started logout order, -o json stability note)._
 
+_Follow-up 2026-07-09 (spotted on `cleura gardener --help`): the region/project
+requirement is now stated in the help TEXT of every gardener command — the group
+(`gardener`, `gardener shoot`) and every leaf (list/kubeconfig/wake/hibernate/
+reconcile) — via a shared `projectScopedHelp` note, not only where the flags
+happen to be listed. Locked by TestGardenerHelpStatesProjectRequirement._
+
 - [x] **Naming inconsistency:** `config list-profiles`/`use-profile`/`delete-profile`
   (verb-noun) vs `user list` / `gardener shoot list` (noun-verb). Restructure to a nested
   `config profile list|use|delete` group, keeping the current names as hidden aliases.

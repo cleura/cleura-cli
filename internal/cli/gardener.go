@@ -18,10 +18,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// projectScopedHelp states the region/project requirement. It is appended to
+// the help of every gardener command so the prerequisite is stated wherever a
+// user looks (the parent group and each leaf), not only on 'shoot list'.
+const projectScopedHelp = `A region and project must be selected for gardener commands: pass
+--region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
+profile with 'cleura login'.`
+
 func newGardenerCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gardener",
 		Short: "Manage Gardener Kubernetes clusters",
+		Long:  "Manage Gardener Kubernetes clusters.\n\n" + projectScopedHelp,
 		// A typo'd subcommand must fail loudly (exit 1 + suggestions), not
 		// print help to stdout with exit 0 — CI pipelines key off exit codes.
 		Args: cobra.NoArgs,
@@ -31,12 +39,9 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 	shoot := &cobra.Command{
 		Use:   "shoot",
 		Short: "Manage shoot clusters",
-		Long: `Manage Gardener shoot (Kubernetes) clusters. Every shoot command is
-project-scoped: a region and project must be selected via --region/--project-id,
-the CLEURA_REGION/CLEURA_PROJECT_ID environment variables, or values stored in
-the profile at login.`,
-		Args: cobra.NoArgs,
-		RunE: groupHelp,
+		Long:  "Manage Gardener shoot (Kubernetes) clusters.\n\n" + projectScopedHelp,
+		Args:  cobra.NoArgs,
+		RunE:  groupHelp,
 	}
 	// Region/project are needed by every gardener call; persistent here so
 	// all shoot subcommands inherit them (and they no longer clutter
@@ -49,6 +54,7 @@ the profile at login.`,
 		newShootActionCommand(opts, shootAction{
 			use:       "wake <shoot-name>",
 			short:     "Wake a shoot cluster up from hibernation",
+			long:      "Wake a shoot cluster up from hibernation.\n\n" + projectScopedHelp,
 			op:        "waking shoot",
 			confirmed: "Requested wake-up of shoot %q; watch progress with 'cleura gardener shoot list'",
 			example:   "  cleura gardener shoot wake prod",
@@ -63,6 +69,7 @@ the profile at login.`,
 		newShootActionCommand(opts, shootAction{
 			use:       "hibernate <shoot-name>",
 			short:     "Hibernate a shoot cluster (scales workloads and control plane down)",
+			long:      "Hibernate a shoot cluster: scale its workloads and control plane down to save cost. Reversible with 'cleura gardener shoot wake'.\n\n" + projectScopedHelp,
 			op:        "hibernating shoot",
 			confirmed: "Requested hibernation of shoot %q; watch progress with 'cleura gardener shoot list'",
 			example:   "  cleura gardener shoot hibernate staging   # reversible: wake it with 'shoot wake'",
@@ -77,10 +84,9 @@ the profile at login.`,
 		newShootActionCommand(opts, shootAction{
 			use:   "reconcile <shoot-name>",
 			short: "Trigger a reconciliation of a shoot cluster",
-			long: `Ask Gardener to run its reconciliation loop for this shoot now, instead of
-waiting for the periodic cycle — it applies pending changes and can recover a
-cluster stuck after a transient error. A region and project must be selected
-(--region/--project-id, CLEURA_REGION/CLEURA_PROJECT_ID, or stored at login).`,
+			long: "Ask Gardener to run its reconciliation loop for this shoot now, instead of\n" +
+				"waiting for the periodic cycle — it applies pending changes and can recover a\n" +
+				"cluster stuck after a transient error.\n\n" + projectScopedHelp,
 			op:        "reconciling shoot",
 			confirmed: "Requested reconcile of shoot %q; watch progress with 'cleura gardener shoot list'",
 			example:   "  cleura gardener shoot reconcile prod",
@@ -119,11 +125,9 @@ func gardenerContext(opts *globalOptions) (config.Settings, *cleura.Client, erro
 
 func newShootListCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List shoot clusters in a project",
-		Long: `List shoot clusters in a project. A region and project must be selected:
-via --region/--project-id, CLEURA_REGION/CLEURA_PROJECT_ID, or stored in the
-profile at login.`,
+		Use:     "list",
+		Short:   "List shoot clusters in a project",
+		Long:    "List shoot clusters in a project.\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot list\n  cleura gardener shoot list --region sto1 --project-id a1b2c3 -o json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -213,10 +217,9 @@ func newShootKubeconfigCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kubeconfig <shoot-name>",
 		Short: "Create a time-limited admin kubeconfig for a shoot cluster",
-		Long: `Create an admin kubeconfig for a shoot cluster and print it to stdout,
-or write it to a file with --file. The credential expires after --expiration
-(the API may cap the allowed validity). A region and project must be selected
-(--region/--project-id, CLEURA_REGION/CLEURA_PROJECT_ID, or stored at login).`,
+		Long: "Create an admin kubeconfig for a shoot cluster and print it to stdout,\n" +
+			"or write it to a file with --file. The credential expires after --expiration\n" +
+			"(the API may cap the allowed validity).\n\n" + projectScopedHelp,
 		Example: `  cleura gardener shoot kubeconfig prod > prod.kubeconfig
   cleura gardener shoot kubeconfig prod --expiration 8h -f ~/.kube/prod.yaml
   KUBECONFIG=$(pwd)/prod.kubeconfig kubectl get nodes`,

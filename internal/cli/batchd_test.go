@@ -1,10 +1,36 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 
 	api "github.com/cleura/cleura-client-go/api"
 )
+
+// TestGardenerHelpStatesProjectRequirement locks in that every project-scoped
+// gardener command states the region/project prerequisite in its help text
+// (not just by listing the flags).
+func TestGardenerHelpStatesProjectRequirement(t *testing.T) {
+	root := NewRootCommand("test")
+	for _, path := range [][]string{
+		{"gardener"},
+		{"gardener", "shoot"},
+		{"gardener", "shoot", "list"},
+		{"gardener", "shoot", "kubeconfig"},
+		{"gardener", "shoot", "wake"},
+		{"gardener", "shoot", "hibernate"},
+		{"gardener", "shoot", "reconcile"},
+	} {
+		c, _, err := root.Find(path)
+		if err != nil {
+			t.Fatalf("find %v: %v", path, err)
+		}
+		help := c.Long
+		if !strings.Contains(help, "region and project must be selected") {
+			t.Errorf("%v help does not state the region/project requirement:\n%s", path, help)
+		}
+	}
+}
 
 func TestShootStatusSummary(t *testing.T) {
 	op := func(state string, progress int) *api.GardenerShootLastOperation {

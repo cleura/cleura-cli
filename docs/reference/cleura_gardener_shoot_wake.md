@@ -2,6 +2,14 @@
 
 Wake a shoot cluster up from hibernation
 
+### Synopsis
+
+Wake a shoot cluster up from hibernation.
+
+A region and project must be selected for gardener commands: pass
+--region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
+profile with 'cleura login'.
+
 ```
 cleura gardener shoot wake <shoot-name> [flags]
 ```

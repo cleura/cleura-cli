@@ -2,6 +2,14 @@
 
 Manage Gardener Kubernetes clusters
 
+### Synopsis
+
+Manage Gardener Kubernetes clusters.
+
+A region and project must be selected for gardener commands: pass
+--region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
+profile with 'cleura login'.
+
 ```
 cleura gardener [flags]
 ```

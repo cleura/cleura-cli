@@ -4,9 +4,11 @@ List shoot clusters in a project
 
 ### Synopsis
 
-List shoot clusters in a project. A region and project must be selected:
-via --region/--project-id, CLEURA_REGION/CLEURA_PROJECT_ID, or stored in the
-profile at login.
+List shoot clusters in a project.
+
+A region and project must be selected for gardener commands: pass
+--region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
+profile with 'cleura login'.
 
 ```
 cleura gardener shoot list [flags]
