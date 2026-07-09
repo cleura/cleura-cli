@@ -7,6 +7,10 @@ are current. Tick items as they land.
 > The 2026-07-09 full-CLI review (8 lenses, live-tested) has its own tracked file:
 > [full-review-2026-07-09.md](full-review-2026-07-09.md) — 11 verified bugs + flag/
 > placement + profile/login DX, organized into batches A–D.
+>
+> Full Gardener API coverage (all 29 ops → subcommands, batched A–G) is planned in
+> [gardener-roadmap.md](gardener-roadmap.md); it supersedes the `gardener shoot get`
+> and `CreateShootAdminKubeconfig helper` items below.
 
 ## Done (compressed history)
 
@@ -57,8 +61,9 @@ are current. Tick items as they land.
 - [ ] Project-ID discovery (`cleura project list`): sharpest week-one hole —
   gardener commands require `--project-id` the CLI cannot look up. Needs an
   SDK include-tag decision (additive, semver-safe).
-- [ ] `gardener shoot get` (detail view); document the split "CLI owns day-2,
-  terraform owns lifecycle".
+- [~] `gardener shoot get` (detail view) — now Batch B of
+  [gardener-roadmap.md](gardener-roadmap.md), which also adds full create/edit/
+  delete/worker/upgrade/monitoring coverage.
 - [ ] Release engineering: goreleaser + CI + binaries (deliberately deferred
   from v0.1.0); private-repo binary-download recipe for the CI examples;
   release notes on tags.
@@ -97,8 +102,10 @@ Decision recorded: `internal/config` stays private; the subprocess is the bounda
 - [x] Move the UPGRADE cloud-profile fetch out of the table-render closure and
   surface upgrade info in `-o json`. DONE Batch D (view model built before
   output.Render; `upgrade_available`/`status_summary` in json/yaml).
-- [ ] cleura-client-go: `CreateShootAdminKubeconfig` helper owning the raw-body
+- [~] cleura-client-go: `CreateShootAdminKubeconfig` helper owning the raw-body
   Content-Type workaround + a shared API-error type (CLI and provider both need it).
+  Scoped in [gardener-roadmap.md](gardener-roadmap.md) → "SDK work", which adds a
+  second raw-body case (`GetShootSshPrivateKey`) needing the same helper.
 - [x] `login --api-url` only no longer persists `cloud: public` into a
   private-cloud profile. DONE Batch A (persistedEndpoint omits the cloud when it
   is only the built-in default and an explicit URL is set).
