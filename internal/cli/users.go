@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -57,7 +58,7 @@ rights on the logged-in account.`,
 				return fmt.Errorf("listing users: %w", err)
 			}
 			if resp.JSON200 == nil {
-				return apiAuthError("listing users", settings, resp.HTTPResponse, resp.Body)
+				return userAuthError("listing users", settings, resp.HTTPResponse, resp.Body)
 			}
 			users := *resp.JSON200
 
@@ -162,6 +163,19 @@ func newUserGetCommand(opts *globalOptions) *cobra.Command {
 	return cmd
 }
 
+// userAuthError is apiAuthError plus a hint specific to the user commands: a
+// 403 that is not about the token means the account lacks the users
+// privilege, so point the caller at whoami for their own account (the escape
+// hatch a non-admin needs). It is kept here, not in the shared apiAuthError,
+// so whoami's own 403 and gardener 403s are not given this hint.
+func userAuthError(op string, s config.Settings, resp *http.Response, body []byte) error {
+	err := apiAuthError(op, s, resp, body)
+	if resp.StatusCode == http.StatusForbidden && !strings.Contains(strings.ToLower(string(body)), "token") {
+		return fmt.Errorf("%w\nthis needs the 'users' privilege; to view your own account use 'cleura whoami'", err)
+	}
+	return err
+}
+
 // lookupUser fetches a user by ID, falling back to an exact username match
 // from the user list for non-numeric arguments.
 func lookupUser(cmd *cobra.Command, settings config.Settings, client *cleura.Client, arg string) (*api.CommonUserLogin, error) {
@@ -183,7 +197,7 @@ func lookupUser(cmd *cobra.Command, settings config.Settings, client *cleura.Cli
 			return nil, fmt.Errorf("looking up username %q: %w", arg, err)
 		}
 		if list.JSON200 == nil {
-			return nil, apiAuthError("looking up username", settings, list.HTTPResponse, list.Body)
+			return nil, userAuthError("looking up username", settings, list.HTTPResponse, list.Body)
 		}
 		for i, u := range *list.JSON200 {
 			if u.Name == arg {
@@ -192,7 +206,7 @@ func lookupUser(cmd *cobra.Command, settings config.Settings, client *cleura.Cli
 		}
 		return nil, fmt.Errorf("no user with ID or username %q", arg)
 	}
-	return nil, apiAuthError("fetching user", settings, resp.HTTPResponse, resp.Body)
+	return nil, userAuthError("fetching user", settings, resp.HTTPResponse, resp.Body)
 }
 
 // displayName joins the optional first and last name.

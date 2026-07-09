@@ -22,11 +22,13 @@ func newConfigCommand(opts *globalOptions) *cobra.Command {
 	}
 	cmd.AddCommand(
 		newConfigViewCommand(opts),
+		newConfigCurrentCommand(opts),
 		newConfigSetCommand(opts),
 		newConfigPathCommand(),
 		newGetCredentialsCommand(opts),
 		newUseProfileCommand(opts),
 		newListProfilesCommand(opts),
+		newRenameProfileCommand(opts),
 		newDeleteProfileCommand(opts),
 	)
 	return cmd
@@ -54,6 +56,11 @@ selected profile are pointed out on stderr. The token value is never shown.`,
 			cfg, s, err := opts.settings()
 			if err != nil {
 				return err
+			}
+			// The diagnostic command should not silently hide a typo'd
+			// --profile behind a defaults table.
+			if !s.ProfileExists && s.ProfileName != "default" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "note: profile %q does not exist; showing defaults\n", s.ProfileName)
 			}
 
 			endpoint, err := s.ResolveURL()
@@ -176,16 +183,25 @@ An empty value ("") removes the stored value. Tokens cannot be set here; use
 				return err
 			}
 			name := cfg.ProfileName(config.Flags{Profile: opts.profile})
-			_, exists := cfg.Profiles[name]
+			existing, exists := cfg.Profiles[name]
 			if value == "" && !exists {
 				// Unsetting a value on a profile that does not exist must not
 				// materialize an empty one.
 				opts.infof(cmd, "Profile %q does not exist; nothing to unset", name)
 				return nil
 			}
+			// Changing the username on a profile that holds a token desyncs
+			// the pair (the token still belongs to the old username).
+			if key == "username" && existing != nil && existing.Token != "" && value != existing.Username {
+				opts.warnf(cmd, "profile %q has a stored token for %q; changing the username may leave the token mismatched — run 'cleura login' to refresh it", name, existing.Username)
+			}
 			set(cfg.Profile(name), value)
 			if err := cfg.Save(); err != nil {
 				return err
+			}
+			// A typo in --profile would otherwise mint a phantom silently.
+			if !exists {
+				opts.infof(cmd, "Created profile %q", name)
 			}
 			opts.infof(cmd, "Set %s = %q in profile %q", key, value, name)
 			return nil
@@ -208,6 +224,69 @@ $XDG_CONFIG_HOME/cleura/config.yaml, otherwise ~/.config/cleura/config.yaml
 				return err
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), path)
+			return nil
+		},
+	}
+}
+
+func newConfigCurrentCommand(opts *globalOptions) *cobra.Command {
+	return &cobra.Command{
+		Use:   "current",
+		Short: "Print the profile the next command would use",
+		Long: `Print the name of the profile that commands resolve to right now
+(--profile / $CLEURA_PROFILE / current_profile / "default"), without a network
+call — the quick answer to "which profile am I on?".`,
+		Example: "  cleura config current",
+		Args:    cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, s, err := opts.settings()
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), s.ProfileName)
+			return nil
+		},
+	}
+}
+
+func newRenameProfileCommand(opts *globalOptions) *cobra.Command {
+	return &cobra.Command{
+		Use:   "rename-profile <old> <new>",
+		Short: "Rename a profile",
+		Long: `Rename a profile, keeping its stored token and settings (the token
+belongs to the same account, so no re-login is needed). current_profile follows
+the rename. Refuses if the new name already exists.`,
+		Example:           "  cleura config rename-profile default work",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: completeProfileNameArg,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			oldName, newName := args[0], args[1]
+			if oldName == newName {
+				return fmt.Errorf("old and new names are the same")
+			}
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+			p, ok := cfg.Profiles[oldName]
+			if !ok {
+				return fmt.Errorf("profile %q does not exist%s", oldName, availableProfiles(cfg))
+			}
+			if _, exists := cfg.Profiles[newName]; exists {
+				return fmt.Errorf("profile %q already exists; choose another name or delete it first", newName)
+			}
+			if p == nil { // hand-edited nil entry
+				p = &config.Profile{}
+			}
+			cfg.Profiles[newName] = p
+			delete(cfg.Profiles, oldName)
+			if cfg.CurrentProfile == oldName {
+				cfg.CurrentProfile = newName
+			}
+			if err := cfg.Save(); err != nil {
+				return err
+			}
+			opts.infof(cmd, "Renamed profile %q to %q", oldName, newName)
 			return nil
 		},
 	}
@@ -267,10 +346,17 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			current := cfg.ProfileName(config.Flags{Profile: opts.profile})
+			// The CURRENT (*) column marks the stored current_profile — what
+			// the config says — not whatever a --profile/env override selects
+			// for this one run; that override is surfaced separately below.
+			current := cfg.CurrentProfile
+			effective := cfg.ProfileName(config.Flags{Profile: opts.profile})
 
 			if _, ok := cfg.Profiles[cfg.CurrentProfile]; cfg.CurrentProfile != "" && !ok {
 				fmt.Fprintf(cmd.ErrOrStderr(), "warning: current_profile %q does not exist in the config file\n", cfg.CurrentProfile)
+			}
+			if effective != current {
+				opts.infof(cmd, "selected for this run: %q (overrides current_profile %q)", effective, current)
 			}
 
 			names := cfg.ProfileNames()
@@ -349,13 +435,25 @@ fails, and the warning says so).`,
 				}
 			}
 			delete(cfg.Profiles, name)
-			if cfg.CurrentProfile == name {
+			clearedCurrent := cfg.CurrentProfile == name
+			if clearedCurrent {
 				cfg.CurrentProfile = ""
 			}
 			if err := cfg.Save(); err != nil {
 				return err
 			}
 			opts.infof(cmd, "Deleted profile %q", name)
+			// Deleting the current profile leaves no current one; guide the
+			// user rather than silently falling back to a nonexistent default.
+			if clearedCurrent {
+				switch remaining := cfg.ProfileNames(); len(remaining) {
+				case 0:
+				case 1:
+					opts.infof(cmd, "No current profile; select the remaining one with 'cleura config use-profile %s'", remaining[0])
+				default:
+					opts.infof(cmd, "No current profile; select one with 'cleura config use-profile <name>' (%s)", strings.Join(remaining, ", "))
+				}
+			}
 			return nil
 		},
 	}

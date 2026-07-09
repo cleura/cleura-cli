@@ -83,28 +83,30 @@ _Done 2026-07-09: --region/--project-id scoped to gardener+login, -o to render c
 
 ## Batch C — profile & login ergonomics (flagship polish)
 
-- [ ] **HIGH — a `user` 403 for missing privilege dead-ends** without telling a non-admin
+_Done 2026-07-09, with regression tests. Adds `config current` and `config rename-profile`; the user 403 now points non-admins at `whoami`; config set announces creation and warns on username/token desync; delete-current hints at remaining profiles; list-profiles marks the stored current with an override note; config view flags an unknown profile; login prints a context line and no longer echoes a stray secret._
+
+- [x] **HIGH — a `user` 403 for missing privilege dead-ends** without telling a non-admin
   that `whoami` shows their own account. Add the hint at the user-command call site (not
   in shared `apiAuthError`, which would make whoami's own 403 circular).
-- [ ] **MEDIUM — no `rename-profile`** (standard operation; today it's hand-edit or
+- [x] **MEDIUM — no `rename-profile`** (standard operation; today it's hand-edit or
   destructive delete+re-login). Add `config rename-profile <old> <new>` (rekey + update
   current_profile, refuse if new exists).
-- [ ] **MEDIUM — `config set` silently creates a profile** — a typo'd `--profile` mints a
+- [x] **MEDIUM — `config set` silently creates a profile** — a typo'd `--profile` mints a
   phantom with no "created" signal. Print "Created profile X" on first write.
-- [ ] **LOW — `config view --profile ghost`** shows a defaults table with no "does not
+- [x] **LOW — `config view --profile ghost`** shows a defaults table with no "does not
   exist" hint (it has `ProfileExists` but ignores it). The diagnostic command masks a bad
   `--profile`.
-- [ ] **LOW — `config set username`** on a logged-in profile silently desyncs it from the
+- [x] **LOW — `config set username`** on a logged-in profile silently desyncs it from the
   stored token, unwarned. Warn / suggest re-login.
-- [ ] **LOW — `list-profiles` `*` marks the effective (flag/env) profile, not the stored
+- [x] **LOW — `list-profiles` `*` marks the effective (flag/env) profile, not the stored
   `current_profile`** — can contradict its own warning. Mark `cfg.CurrentProfile`.
-- [ ] **LOW — no quick "which profile am I on"** — add `config current` (prints the
+- [x] **LOW — no quick "which profile am I on"** — add `config current` (prints the
   resolved profile name, no network).
-- [ ] **LOW — deleting the current profile** clears `current_profile` and falls back to a
+- [x] **LOW — deleting the current profile** clears `current_profile` and falls back to a
   nonexistent `default` even when other profiles remain. Hint / auto-select if one remains.
-- [ ] **LOW — same-identity re-login shows a bare `Password:`** with no identity/profile/URL
+- [x] **LOW — same-identity re-login shows a bare `Password:`** with no identity/profile/URL
   context. Print a context line first.
-- [ ] **LOW — the no-args guard echoes the (likely secret) argument** into stderr/logs.
+- [x] **LOW — the no-args guard echoes the (likely secret) argument** into stderr/logs.
   Report a count instead of the value.
 
 ## Batch D — naming restructure & docs

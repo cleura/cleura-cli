@@ -50,7 +50,9 @@ token with --token-stdin (validated before storing).`,
 		// of passing the token on the command line with a purpose-built hint.
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return fmt.Errorf("login takes no arguments (got %q) — secrets are never passed on the command line; pipe them instead: echo \"$TOKEN\" | cleura login --token-stdin", args[0])
+				// Report the count, not the value: the stray argument is
+				// very likely the secret the user meant to pipe.
+				return fmt.Errorf("login takes no arguments (got %d) — secrets are never passed on the command line; pipe them instead: echo \"$TOKEN\" | cleura login --token-stdin", len(args))
 			}
 			return nil
 		},
@@ -106,6 +108,10 @@ token with --token-stdin (validated before storing).`,
 					return fmt.Errorf("%s — refusing to overwrite; use --profile <name> to log in to a separate profile", situation)
 				}
 			}
+
+			// Say what is being authenticated before the bare password/SMS
+			// or token prompt, so the user knows which identity/endpoint.
+			opts.infof(cmd, "Logging in as %s to %s (profile %q)", username, url, settings.ProfileName)
 
 			var token string
 			if tokenStdin {

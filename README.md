@@ -82,7 +82,9 @@ Working with more than one cloud is a matter of profiles:
 cleura login --profile compliant --cloud compliant   # log in to a separate profile — it becomes current
 cleura --profile production whoami                   # one-off use of another profile
 cleura config use-profile production                 # switch the current profile without logging in
+cleura config current                                # which profile am I on?
 cleura config list-profiles
+cleura config rename-profile production prod         # rename (keeps the token; current_profile follows)
 cleura config delete-profile compliant
 ```
 
