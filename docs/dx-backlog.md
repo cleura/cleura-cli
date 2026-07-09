@@ -34,12 +34,13 @@ are current. Tick items as they land.
 
 ## Open — v0.1.x should-fix (from the release review)
 
-- [ ] `config set` validates nothing: accepts any cloud value, and silently
-  creates a new profile for a typo'd `--profile` name while `use-profile`
-  refuses unknown names — make creation explicit or consistent.
-- [ ] Nil profile entry (`profiles:\n  x:`): `use-profile` switches to it and
-  `list-profiles` shows it, but authenticated commands say it does not exist.
-  Fix in Resolve: key-present-but-nil counts as an existing empty profile.
+- [ ] `config profile set` does not validate the *value* of `cloud` (any string
+  is accepted). (The silent-phantom-create and no-"created"-signal parts are
+  DONE in batches A/C: empty-value on a missing profile is a no-op, and creating
+  a profile now prints "Created profile X".)
+- [x] Nil profile entry (`profiles:\n  x:`): a present-but-nil key now counts as
+  an existing empty profile everywhere (Resolve, config profile use/list). DONE
+  batches A/C.
 - [ ] `config view -o json` leaks table presentation strings: token value is
   `"(set)"`/`"(not set)"` while other unset values are `""` — add a boolean
   field, keep values machine-stable.
@@ -102,14 +103,15 @@ Decision recorded: `internal/config` stays private; the subprocess is the bounda
 - [ ] Inline env-shadow warnings on authenticated commands (`config view`
   covers the read side today).
 - [ ] Exit-code differentiation (usage vs auth vs API failure) for scripting.
-- [ ] Endpoint pairing corners: `config set` can store cloud/api_url pairs that
-  resolveEndpoint ignores.
+- [ ] Endpoint pairing corners: `config profile set` can store cloud/api_url
+  pairs that resolveEndpoint ignores.
 
 ## ⚖ Open decisions (pre-v1)
 
-- [ ] Command grammar: `config use-profile` (kubectl-style hyphenation) vs
-  `config profile use` (noun-verb, matching `gardener shoot list`) — converge
-  or add aliases before v1.
+- [x] Command grammar — RESOLVED 2026-07-09 (Batch D): restructured to
+  `config profile list|current|use|set|rename|delete` (noun-verb, matching
+  `gardener shoot` / `user`). Clean break, no aliases — the old flat paths
+  (`config use-profile` etc.) were removed. Breaking vs v0.2.1 → next tag is v0.3.0.
 - [ ] Token storage layout: current single 0600 file (aws/az practice) vs
   config/credentials split vs OS keyring with fallback.
 - [ ] Commit the OpenAPI spec snapshot for reproducible generation vs today's

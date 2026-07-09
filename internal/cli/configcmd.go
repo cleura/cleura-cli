@@ -153,8 +153,8 @@ selected profile are pointed out on stderr. The token value is never shown.`,
 	return cmd
 }
 
-// settableKeys are the profile fields "config set" may write. The token is
-// excluded on purpose: it is set by login, which validates it.
+// settableKeys are the profile fields "config profile set" may write. The
+// token is excluded on purpose: it is set by login, which validates it.
 var settableKeys = map[string]func(p *config.Profile, value string){
 	"cloud":      func(p *config.Profile, v string) { p.Cloud = v },
 	"api_url":    func(p *config.Profile, v string) { p.APIURL = v },
@@ -341,7 +341,7 @@ func newUseProfileCommand(opts *globalOptions) *cobra.Command {
 }
 
 func newListProfilesCommand(opts *globalOptions) *cobra.Command {
-	// profileView is what list-profiles exposes; deliberately without the token.
+	// profileView is what "config profile list" exposes; deliberately without the token.
 	type profileView struct {
 		Name      string `json:"name" yaml:"name"`
 		Current   bool   `json:"current" yaml:"current"`
