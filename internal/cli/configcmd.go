@@ -169,6 +169,13 @@ An empty value ("") removes the stored value. Tokens cannot be set here; use
 				return err
 			}
 			name := cfg.ProfileName(config.Flags{Profile: opts.profile})
+			_, exists := cfg.Profiles[name]
+			if value == "" && !exists {
+				// Unsetting a value on a profile that does not exist must not
+				// materialize an empty one.
+				opts.infof(cmd, "Profile %q does not exist; nothing to unset", name)
+				return nil
+			}
 			set(cfg.Profile(name), value)
 			if err := cfg.Save(); err != nil {
 				return err
@@ -255,7 +262,7 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 			}
 			current := cfg.ProfileName(config.Flags{Profile: opts.profile})
 
-			if cfg.CurrentProfile != "" && cfg.Profiles[cfg.CurrentProfile] == nil {
+			if _, ok := cfg.Profiles[cfg.CurrentProfile]; cfg.CurrentProfile != "" && !ok {
 				fmt.Fprintf(cmd.ErrOrStderr(), "warning: current_profile %q does not exist in the config file\n", cfg.CurrentProfile)
 			}
 

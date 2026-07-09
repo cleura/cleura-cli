@@ -50,6 +50,19 @@ func TestLoginRefusesIdentityOverwriteNonInteractive(t *testing.T) {
 	}
 }
 
+func TestLoginTokenStdinRequiresUsername(t *testing.T) {
+	// With --token-stdin and no resolvable username, the CLI must fail fast
+	// with actionable guidance — NOT consume the piped token as the username
+	// and die on a misleading EOF.
+	err := runLogin(t, "", "a-real-looking-token\n", "--token-stdin", "--cloud", "public")
+	if err == nil || !strings.Contains(err.Error(), "needs a username") {
+		t.Fatalf("want '--token-stdin needs a username', got %v", err)
+	}
+	if strings.Contains(err.Error(), "EOF") || strings.Contains(err.Error(), "Token prompt") {
+		t.Errorf("must not consume the token as a username: %v", err)
+	}
+}
+
 func TestLoginSameIdentityIsSilentTokenRefresh(t *testing.T) {
 	// Same username and endpoint: no guard — the flow proceeds straight to
 	// the password prompt (which fails here on exhausted stdin, proving the

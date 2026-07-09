@@ -88,9 +88,14 @@ a breaking change bumps it. Consumers must check the version field.`,
 				return noCredentials("no credentials: %v", err)
 			}
 
-			// Credentials resolved from different sources may not authenticate
-			// as a pair; say so where a human can see it (stderr).
-			if settings.Sources.Username != settings.Sources.Token {
+			// A username/token pair split across the profile and the
+			// environment may not belong together. env+env (the CI path) and
+			// profile+profile are deliberate, consistent pairs — stay silent.
+			// Only one side coming from the profile while the other is
+			// overridden is the genuine mismatch risk.
+			usernameFromProfile := settings.Sources.Username == "profile"
+			tokenFromProfile := settings.Sources.Token == "profile"
+			if usernameFromProfile != tokenFromProfile {
 				fmt.Fprintf(cmd.ErrOrStderr(), "warning: the username comes from %s but the token from %s — the pair may not authenticate together\n", settings.Sources.Username, settings.Sources.Token)
 			}
 			if settings.Sources.Token == "profile" && settings.Sources.Endpoint != "profile" && settings.Sources.Endpoint != "default" {

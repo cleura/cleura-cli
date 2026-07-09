@@ -111,9 +111,13 @@ func TestLoadCorruptConfig(t *testing.T) {
 
 func TestResolveProfileExists(t *testing.T) {
 	t.Setenv("CLEURA_PROFILE", "")
-	cfg := &Config{Profiles: map[string]*Profile{"real": {}}}
+	// A present key with a nil value (hand-edited config) counts as existing.
+	cfg := &Config{Profiles: map[string]*Profile{"real": {}, "nilentry": nil}}
 	if s := cfg.Resolve(Flags{Profile: "real"}); !s.ProfileExists {
 		t.Error("existing profile reported as missing")
+	}
+	if s := cfg.Resolve(Flags{Profile: "nilentry"}); !s.ProfileExists {
+		t.Error("present-but-nil profile key must count as existing")
 	}
 	if s := cfg.Resolve(Flags{Profile: "ghost"}); s.ProfileExists {
 		t.Error("missing profile reported as existing")

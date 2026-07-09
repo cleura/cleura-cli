@@ -71,6 +71,12 @@ token with --token-stdin (validated before storing).`,
 				username = settings.Username
 			}
 			if username == "" {
+				// With --token-stdin the token is the only thing on stdin;
+				// prompting for a username here would consume the token as the
+				// name. Require the username up front instead.
+				if tokenStdin {
+					return fmt.Errorf("--token-stdin needs a username: pass -u/--username or set CLEURA_API_USERNAME")
+				}
 				if username, err = prompt.line(ctx, "Username"); err != nil {
 					return err
 				}
@@ -103,7 +109,12 @@ token with --token-stdin (validated before storing).`,
 
 			var token string
 			if tokenStdin {
-				token, err = loginWithProvidedToken(ctx, opts, prompt, url, username)
+				var canonical string
+				token, canonical, err = loginWithProvidedToken(ctx, opts, prompt, url, username)
+				if err == nil && canonical != "" && canonical != username {
+					opts.infof(cmd, "The token belongs to %q; storing that as the username (you passed %q)", canonical, username)
+					username = canonical
+				}
 			} else {
 				token, err = loginWithPassword(ctx, opts, prompt, url, username)
 			}
@@ -120,18 +131,27 @@ token with --token-stdin (validated before storing).`,
 			// Record the endpoint the token was created against, however it
 			// was selected, so later commands reach the same API.
 			profile.Cloud, profile.APIURL = persistedEndpoint(settings)
-			// A confirmed identity replacement resets the contextual fields:
-			// the old identity's region/project do not apply to the new one.
-			if replacing {
-				profile.Region, profile.ProjectID = "", ""
-			}
-			// Convenience context worth remembering, but never blank stored
-			// values on a plain re-login.
-			if settings.Region != "" {
+			// Region/project apply only when set explicitly this invocation
+			// (flag or env). A plain re-login keeps the stored values; an
+			// identity replacement clears the old identity's values. (The old
+			// unconditional re-apply from settings was dead code: settings
+			// carries the stored profile value as its fallback, so it always
+			// re-applied the previous identity's region/project.)
+			switch settings.Sources.Region {
+			case "--region", "$CLEURA_REGION":
 				profile.Region = settings.Region
+			default:
+				if replacing {
+					profile.Region = ""
+				}
 			}
-			if settings.ProjectID != "" {
+			switch settings.Sources.ProjectID {
+			case "--project-id", "$CLEURA_PROJECT_ID":
 				profile.ProjectID = settings.ProjectID
+			default:
+				if replacing {
+					profile.ProjectID = ""
+				}
 			}
 			// The profile you log in to becomes the current profile — the
 			// az/gcloud/kubectl convention: acquiring credentials activates
@@ -268,27 +288,28 @@ func loginWithSmsCode(ctx context.Context, prompt *prompter, client *cleura.Clie
 	return resp.JSON200.Token, nil
 }
 
-// loginWithProvidedToken reads a pre-created API token and validates it
-// against the API before it is stored.
-func loginWithProvidedToken(ctx context.Context, opts *globalOptions, prompt *prompter, url, username string) (string, error) {
-	token, err := prompt.secret(ctx, "Token")
+// loginWithProvidedToken reads a pre-created API token, validates it against
+// the API before it is stored, and returns the token plus the token owner's
+// username as the API reports it (so a typo'd -u does not get stored).
+func loginWithProvidedToken(ctx context.Context, opts *globalOptions, prompt *prompter, url, username string) (token, canonicalUsername string, err error) {
+	token, err = prompt.secret(ctx, "Token")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if token == "" {
-		return "", fmt.Errorf("token must not be empty")
+		return "", "", fmt.Errorf("token must not be empty")
 	}
 
 	client, err := cleura.NewClientWithCredentials(url, username, token, opts.clientOptions()...)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	resp, err := client.IdentityGetCurrentUserWithResponse(ctx)
 	if err != nil {
-		return "", fmt.Errorf("validating token: %w", err)
+		return "", "", fmt.Errorf("validating token: %w", err)
 	}
 	if resp.JSON200 == nil {
-		return "", apiError("validating token", resp.HTTPResponse, resp.Body)
+		return "", "", apiError("validating token", resp.HTTPResponse, resp.Body)
 	}
-	return token, nil
+	return token, resp.JSON200.Name, nil
 }

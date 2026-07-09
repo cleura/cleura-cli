@@ -24,45 +24,47 @@ exit-code matrix and stdout-is-data-only across all render commands.
 
 ## Batch A — confirmed bugs (fix first)
 
+_All fixed 2026-07-09, with regression tests; verified through the binary and (read-only) live API._
+
 Login / profile path (the flagship):
-- [ ] **HIGH — `--token-stdin` without `-u` consumes the piped token as the username**,
+- [x] **HIGH — `--token-stdin` without `-u` consumes the piped token as the username**,
   then dies `stdin closed before the Token prompt: EOF`. This is the WebAuthn-account
   onboarding path our own help points to. `login.go:70-77,273-280`. Fix: in token-stdin
   mode never prompt for username; fail fast if unresolved from `-u`/`$CLEURA_API_USERNAME`.
-- [ ] **MEDIUM — identity-replacement region/project reset is dead code.** On a confirmed
+- [x] **MEDIUM — identity-replacement region/project reset is dead code.** On a confirmed
   identity swap, `login.go:126` clears region/project but `:130-135` re-apply the old
   profile's values (still in `settings`). New identity silently keeps the old project →
   possible gardener mutation against the wrong project. Fix: re-apply region/project only
   when sourced from a flag/env this invocation (`settings.Sources.Region == "--region" ||
   "$CLEURA_REGION"`, same for project).
-- [ ] **MEDIUM — overwrite-confirm reads piped stdin.** A piped password triggers a
+- [x] **MEDIUM — overwrite-confirm reads piped stdin.** A piped password triggers a
   surprising "refusing to overwrite"; a password of `y`/`yes` would auto-confirm a
   destructive replace — opposite of the documented "non-interactive refuses".
   `login.go:95-101`, `prompt.go:81-90`. Fix: when stdin is not a TTY, `confirm()` refuses
   without reading.
-- [ ] **MEDIUM — `use-profile` ↔ `list-profiles` contradict on a nil profile entry**
+- [x] **MEDIUM — `use-profile` ↔ `list-profiles` contradict on a nil profile entry**
   (`profiles:\n  x:`): use-profile switches + reports success while list-profiles warns
   it "does not exist". Found by two lenses. `configcmd.go:215-227` vs `:258-260`;
   `config.go:223-224`. Fix: a present key exists everywhere; reword warning to
   "has no stored settings".
 
 Fix soon:
-- [ ] **MEDIUM — `get-credentials` prints a spurious "pair may not authenticate together"
+- [x] **MEDIUM — `get-credentials` prints a spurious "pair may not authenticate together"
   warning on 100% of pure-env invocations** — the tool-integration path it exists for
   (env username + env token always have different source labels). `getcredentials.go:93`.
   Fix: warn only on a genuine profile+env cross-mix, not env+env or profile+profile.
-- [ ] **LOW — `config set <key> "" ` on a nonexistent profile creates a phantom `name: {}`**
+- [x] **LOW — `config set <key> "" ` on a nonexistent profile creates a phantom `name: {}`**
   while claiming to remove a value. `configcmd.go:167-176`, `config.go:137-146`. Fix:
   empty value + missing profile = no-op.
-- [ ] **LOW — `kubeconfig --expiration` under 1s truncates to 0s** and bypasses the
+- [x] **LOW — `kubeconfig --expiration` under 1s truncates to 0s** and bypasses the
   positivity guard (validates the duration, sends `int(seconds)`). `gardener.go:198-211`.
   Fix: validate the integer seconds (`< 1` → error).
-- [ ] **LOW — `UPGRADE "?"` conflates "couldn't fetch profiles" with "shoot's cloud
+- [x] **LOW — `UPGRADE "?"` conflates "couldn't fetch profiles" with "shoot's cloud
   profile not matched"** (silent in the latter). `gardener.go:139-146,162-165`.
-- [ ] **NIT — `--token-stdin` doesn't reconcile the token's owner with `-u`** (a typo'd
+- [x] **NIT — `--token-stdin` doesn't reconcile the token's owner with `-u`** (a typo'd
   `-u` is stored). `login.go:286-293`. Use the login name from `IdentityGetCurrentUser`,
   or warn on mismatch.
-- [ ] **NIT — `"full (all areas)"` hardcodes the area count as 7** instead of deriving it.
+- [x] **NIT — `"full (all areas)"` hardcodes the area count as 7** instead of deriving it.
   `users.go:310`.
 
 ## Batch B — flag scoping & `-o` placement (highest-leverage DX, low risk)

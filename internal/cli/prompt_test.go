@@ -53,6 +53,22 @@ func TestPrompterLine(t *testing.T) {
 	}
 }
 
+func TestConfirmNonTTYRefusesWithoutReading(t *testing.T) {
+	// A non-TTY prompter must refuse (return false) without consuming stdin —
+	// a piped "y" must not auto-confirm, and the piped data must survive for
+	// the next read (e.g. a password).
+	p := testPrompter("y\nsecret\n") // ttyFD == -1
+	ok, err := p.confirm(context.Background(), "Replace it?")
+	if err != nil || ok {
+		t.Fatalf("non-TTY confirm = (%v,%v), want (false,nil)", ok, err)
+	}
+	// The "y" line must still be there to read.
+	line, err := p.line(context.Background(), "Next")
+	if err != nil || line != "y" {
+		t.Fatalf("confirm consumed stdin: next line = %q, %v", line, err)
+	}
+}
+
 func TestPrompterCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

@@ -76,9 +76,14 @@ func (p *prompter) read(ctx context.Context, name string, clean func(string) str
 	}
 }
 
-// confirm asks a yes/no question, defaulting to no. Exhausted stdin also
-// means no.
+// confirm asks a yes/no question, defaulting to no. When stdin is not a
+// terminal it refuses without reading: there is no one to answer, and reading
+// would consume piped data meant for a later prompt (e.g. a password), and a
+// piped "y" must never auto-confirm a destructive action.
 func (p *prompter) confirm(ctx context.Context, question string) (bool, error) {
+	if p.ttyFD < 0 {
+		return false, nil
+	}
 	answer, err := p.read(ctx, question+" [y/N]", strings.TrimSpace)
 	if err != nil {
 		if errors.Is(err, io.EOF) {

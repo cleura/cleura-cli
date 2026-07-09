@@ -220,8 +220,10 @@ func (c *Config) profileName(flags Flags) (string, string) {
 func (c *Config) Resolve(flags Flags) Settings {
 	var s Settings
 	s.ProfileName, s.Sources.Profile = c.profileName(flags)
-	profile := c.Profiles[s.ProfileName]
-	s.ProfileExists = profile != nil
+	// A present key with a nil value (hand-edited "profiles:\n  x:") still
+	// counts as an existing profile — just an empty one.
+	profile, ok := c.Profiles[s.ProfileName]
+	s.ProfileExists = ok
 	if profile == nil {
 		profile = &Profile{}
 	}

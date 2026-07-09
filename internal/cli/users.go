@@ -279,8 +279,10 @@ type privilegeArea struct {
 }
 
 // privilegeAreas lists the set privilege areas in a stable order.
-func privilegeAreas(p api.CommonUserLoginPrivileges) []privilegeArea {
-	all := []privilegeArea{
+// allPrivilegeAreas is the full set of privilege areas in display order; its
+// length is the "all areas" total that rolesSummary compresses against.
+func allPrivilegeAreas(p api.CommonUserLoginPrivileges) []privilegeArea {
+	return []privilegeArea{
 		{"account", "Account", p.Account},
 		{"ai-gateway", "AI Gateway", p.AiGateway},
 		{"application", "Application", p.Application},
@@ -289,6 +291,10 @@ func privilegeAreas(p api.CommonUserLoginPrivileges) []privilegeArea {
 		{"openstack", "OpenStack", p.Openstack},
 		{"users", "Users", p.Users},
 	}
+}
+
+func privilegeAreas(p api.CommonUserLoginPrivileges) []privilegeArea {
+	all := allPrivilegeAreas(p)
 	set := all[:0]
 	for _, area := range all {
 		if area.p != nil {
@@ -307,7 +313,7 @@ func rolesSummary(p api.CommonUserLoginPrivileges) string {
 	if len(areas) == 0 {
 		return "-"
 	}
-	allFull := len(areas) == 7
+	allFull := len(areas) == len(allPrivilegeAreas(p))
 	for _, area := range areas {
 		if area.p.Type != api.Full {
 			allFull = false

@@ -137,12 +137,14 @@ profile at login.`,
 				// Kubernetes versions. Degrade gracefully if they cannot be
 				// fetched — the listing is more important than the column.
 				profileVersions := map[string][]api.GardenerCloudProfileKubernetesVersion{}
+				profilesFetched := false
 				if profResp, err := client.GardenerListCloudProfilesWithResponse(cmd.Context(), settings.Cloud); err == nil && profResp.JSON200 != nil {
+					profilesFetched = true
 					for _, p := range *profResp.JSON200 {
 						profileVersions[p.Name] = p.Kubernetes.Versions
 					}
 				} else {
-					opts.warnf(cmd, "could not fetch cloud profiles; UPGRADE column unavailable")
+					opts.warnf(cmd, "could not fetch cloud profiles; UPGRADE column shows \"?\"")
 				}
 
 				rows := make([][]string, 0, len(shoots))
@@ -159,9 +161,15 @@ profile at login.`,
 						status = string(op.State)
 					}
 
+					// "?" only when we truly could not determine it. A successful
+					// fetch that simply lacks this shoot's cloud profile is a
+					// distinct case, flagged once so it is not silent.
 					upgrade := "?"
 					if versions, ok := profileVersions[s.CloudProfileName]; ok {
 						upgrade = upgradeAvailable(s.Kubernetes.Version, versions)
+					} else if profilesFetched {
+						upgrade = "?"
+						opts.warnf(cmd, "cloud profile %q for shoot %q was not found; UPGRADE unknown", s.CloudProfileName, s.Name)
 					}
 
 					rows = append(rows, []string{
@@ -195,8 +203,12 @@ or write it to a file with --file. The credential expires after --expiration
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			if expiration <= 0 {
-				return fmt.Errorf("--expiration must be positive, got %s", expiration)
+			// Validate the integer seconds actually sent: a sub-second
+			// duration is >0 but truncates to 0, which would slip past a
+			// naive `expiration <= 0` check.
+			expirationSeconds := int(expiration.Seconds())
+			if expirationSeconds < 1 {
+				return fmt.Errorf("--expiration must be at least 1s, got %s", expiration)
 			}
 
 			settings, client, err := gardenerContext(opts)
@@ -207,7 +219,7 @@ or write it to a file with --file. The credential expires after --expiration
 			resp, err := client.GardenerCreateShootAdminKubeConfigWithResponse(cmd.Context(),
 				settings.Cloud, settings.Region, settings.ProjectID, name,
 				api.GardenerCreateShootAdminKubeConfigJSONRequestBody{
-					ExpirationSeconds: int(expiration.Seconds()),
+					ExpirationSeconds: expirationSeconds,
 				})
 			if err != nil {
 				return fmt.Errorf("creating kubeconfig: %w", err)
