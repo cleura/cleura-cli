@@ -2,6 +2,13 @@
 
 Trigger a reconciliation of a shoot cluster
 
+### Synopsis
+
+Ask Gardener to run its reconciliation loop for this shoot now, instead of
+waiting for the periodic cycle — it applies pending changes and can recover a
+cluster stuck after a transient error. A region and project must be selected
+(--region/--project-id, CLEURA_REGION/CLEURA_PROJECT_ID, or stored at login).
+
 ```
 cleura gardener shoot reconcile <shoot-name> [flags]
 ```

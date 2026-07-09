@@ -28,9 +28,8 @@ release pipeline lands.
 cleura login              # prompts for username/password (SMS 2FA supported)
 cleura whoami             # show the authenticated user
 cleura whoami -o json     # machine-readable output
-cleura logout             # revoke and remove the stored token
 
-cleura user list                                             # account users with their roles
+cleura user list                                             # account users with their privileges
 cleura user get johndoe                                      # one user, full privilege breakdown
 cleura gardener shoot list --region sto1 --project-id <id>   # list Kubernetes clusters
 cleura gardener shoot kubeconfig prod > prod.kubeconfig      # time-limited admin kubeconfig
@@ -38,6 +37,8 @@ cleura gardener shoot kubeconfig prod --expiration 8h -f ~/.kube/prod.yaml
 cleura gardener shoot hibernate prod                         # scale the cluster down
 cleura gardener shoot wake prod                              # wake it up again
 cleura gardener shoot reconcile prod                         # trigger a reconciliation
+
+cleura logout             # revoke and remove the stored token (do this last)
 ```
 
 `--region` and `--project-id` can be stored in the profile (pass them to
@@ -182,6 +183,12 @@ on stdout, so credential chains can fall through to their next source); any
 other exit is a malfunction. `--validate` verifies the token against the API
 first. Compatibility: fields are only added — never renamed or removed — while
 `version` is `1`; a breaking change bumps it, and consumers must check it.
+
+`config get-credentials` is the only versioned, stable JSON contract. The
+`-o json` output of other commands (`whoami`, `user`, `gardener shoot list`,
+`config view`) is for convenience: it mirrors the unversioned API plus a few
+CLI-computed fields and may change between releases, so don't build automation
+that depends on its exact shape.
 
 ## Command reference
 

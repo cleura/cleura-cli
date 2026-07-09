@@ -111,18 +111,20 @@ _Done 2026-07-09, with regression tests. Adds `config current` and `config renam
 
 ## Batch D — naming restructure & docs
 
-- [ ] **Naming inconsistency:** `config list-profiles`/`use-profile`/`delete-profile`
+_Done 2026-07-09. config profile restructure (no aliases, clean break); gardener list WORKERS→POOLS, Succeeded→"ready", computed columns now in -o json via an embedded view model; gardener commands check auth before region/project; kubeconfig validity wording; docs sweep (roles→privileges, reconcile/user-get help, shoot region/project prerequisite, getting-started logout order, -o json stability note)._
+
+- [x] **Naming inconsistency:** `config list-profiles`/`use-profile`/`delete-profile`
   (verb-noun) vs `user list` / `gardener shoot list` (noun-verb). Restructure to a nested
   `config profile list|use|delete` group, keeping the current names as hidden aliases.
   Pre-1.0 is the cheap moment.
-- [ ] Gardener list semantics: **`WORKERS` shows worker-pool count, not node count** —
+- [x] Gardener list semantics: **`WORKERS` shows worker-pool count, not node count** —
   rename to `POOLS` or render a node range; **STATUS** shows raw `Succeeded` (map the
   steady case to "ready"); **kubeconfig "(valid X)"** asserts a lifetime the server may
   cap ("requested validity X"); **computed `UPGRADE`/normalized STATUS are table-only** —
   absent from `-o json/yaml` (add a view model or an `upgrade_available` field).
-- [ ] **Gardener context validated before auth** — a not-logged-in user is told "no
+- [x] **Gardener context validated before auth** — a not-logged-in user is told "no
   region" before "log in". Check auth first in `gardenerContext`.
-- [ ] Docs: README still says "roles" (→ privileges); region/project prerequisite only on
+- [x] Docs: README still says "roles" (→ privileges); region/project prerequisite only on
   `shoot list` (add to wake/hibernate/reconcile/kubeconfig or the parent); `reconcile` and
   `user get` help too thin; getting-started block runs `logout` mid-sequence; state that
   only `get-credentials` (and `config view -o json`) are stable script contracts.

@@ -2,6 +2,13 @@
 
 Show one user with the full privilege breakdown
 
+### Synopsis
+
+Show one user (by numeric ID or exact username) with the full privilege
+breakdown. Viewing another user requires the 'users' privilege or account
+administrator rights; to see your own account without that privilege, use
+'cleura whoami'.
+
 ```
 cleura user get <user-id or username> [flags]
 ```

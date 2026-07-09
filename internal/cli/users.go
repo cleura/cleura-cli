@@ -97,6 +97,10 @@ func newUserGetCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <user-id or username>",
 		Short: "Show one user with the full privilege breakdown",
+		Long: `Show one user (by numeric ID or exact username) with the full privilege
+breakdown. Viewing another user requires the 'users' privilege or account
+administrator rights; to see your own account without that privilege, use
+'cleura whoami'.`,
 		Example: `  cleura user get 4763
   cleura user get johndoe`,
 		Args: cobra.ExactArgs(1),

@@ -31,8 +31,12 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 	shoot := &cobra.Command{
 		Use:   "shoot",
 		Short: "Manage shoot clusters",
-		Args:  cobra.NoArgs,
-		RunE:  groupHelp,
+		Long: `Manage Gardener shoot (Kubernetes) clusters. Every shoot command is
+project-scoped: a region and project must be selected via --region/--project-id,
+the CLEURA_REGION/CLEURA_PROJECT_ID environment variables, or values stored in
+the profile at login.`,
+		Args: cobra.NoArgs,
+		RunE: groupHelp,
 	}
 	// Region/project are needed by every gardener call; persistent here so
 	// all shoot subcommands inherit them (and they no longer clutter
@@ -71,8 +75,12 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 			},
 		}),
 		newShootActionCommand(opts, shootAction{
-			use:       "reconcile <shoot-name>",
-			short:     "Trigger a reconciliation of a shoot cluster",
+			use:   "reconcile <shoot-name>",
+			short: "Trigger a reconciliation of a shoot cluster",
+			long: `Ask Gardener to run its reconciliation loop for this shoot now, instead of
+waiting for the periodic cycle — it applies pending changes and can recover a
+cluster stuck after a transient error. A region and project must be selected
+(--region/--project-id, CLEURA_REGION/CLEURA_PROJECT_ID, or stored at login).`,
 			op:        "reconciling shoot",
 			confirmed: "Requested reconcile of shoot %q; watch progress with 'cleura gardener shoot list'",
 			example:   "  cleura gardener shoot reconcile prod",
@@ -97,11 +105,16 @@ func gardenerContext(opts *globalOptions) (config.Settings, *cleura.Client, erro
 	if err != nil {
 		return settings, nil, err
 	}
+	// Auth is the most fundamental prerequisite: check it before region/project
+	// so a not-logged-in user is told to log in, not to set a region first.
+	client, err := opts.authenticatedClient(settings)
+	if err != nil {
+		return settings, nil, err
+	}
 	if err := requireProjectContext(settings); err != nil {
 		return settings, nil, err
 	}
-	client, err := opts.authenticatedClient(settings)
-	return settings, client, err
+	return settings, client, nil
 }
 
 func newShootListCommand(opts *globalOptions) *cobra.Command {
@@ -129,20 +142,13 @@ profile at login.`,
 			}
 			shoots := *resp.JSON200
 
-			header := []string{"NAME", "REGION", "K8S", "UPGRADE", "WORKERS", "STATUS"}
-			return output.Render(cmd.OutOrStdout(), opts.output, shoots, func(w io.Writer) error {
-				if len(shoots) == 0 {
-					// Header to stdout, notice to stderr: piped consumers see an
-					// empty table, humans see why.
-					opts.infof(cmd, "No shoot clusters in project %s (region %s)", settings.ProjectID, settings.Region)
-					return output.Table(w, header, nil)
-				}
-
-				// The UPGRADE column needs the cloud profiles' available
-				// Kubernetes versions. Degrade gracefully if they cannot be
-				// fetched — the listing is more important than the column.
-				profileVersions := map[string][]api.GardenerCloudProfileKubernetesVersion{}
-				profilesFetched := false
+			// Build the view model BEFORE rendering so -o json/yaml carry the
+			// CLI-computed columns too (status summary, upgrade availability),
+			// not just the raw API shape. The full API shoot is embedded, so
+			// no raw field is lost.
+			profileVersions := map[string][]api.GardenerCloudProfileKubernetesVersion{}
+			profilesFetched := false
+			if len(shoots) > 0 {
 				if profResp, err := client.GardenerListCloudProfilesWithResponse(cmd.Context(), settings.Cloud); err == nil && profResp.JSON200 != nil {
 					profilesFetched = true
 					for _, p := range *profResp.JSON200 {
@@ -151,39 +157,45 @@ profile at login.`,
 				} else {
 					opts.warnf(cmd, "could not fetch cloud profiles; UPGRADE column shows \"?\"")
 				}
+			}
 
-				rows := make([][]string, 0, len(shoots))
-				for _, s := range shoots {
-					// An operation under way (or one that stopped short) beats the
-					// steady-state hibernation flag: is_hibernated stays true for
-					// the whole duration of a wake-up, and would mask its progress.
-					status := ""
-					if op := s.LastOperation; op != nil && op.Progress < 100 {
-						status = fmt.Sprintf("%s (%s %d%%)", op.State, op.Type, op.Progress)
-					} else if s.Status != nil && s.Status.IsHibernated {
-						status = "hibernated"
-					} else if op := s.LastOperation; op != nil {
-						status = string(op.State)
+			views := make([]shootView, 0, len(shoots))
+			for _, s := range shoots {
+				upgradeDisplay, upgradeVersion := "?", ""
+				if versions, ok := profileVersions[s.CloudProfileName]; ok {
+					v := upgradeAvailable(s.Kubernetes.Version, versions) // "-" (current) or a version
+					upgradeDisplay = v
+					if v != "-" {
+						upgradeVersion = v
 					}
+				} else if profilesFetched {
+					opts.warnf(cmd, "cloud profile %q for shoot %q was not found; UPGRADE unknown", s.CloudProfileName, s.Name)
+				}
+				views = append(views, shootView{
+					GardenerShootShoot: s,
+					StatusSummary:      shootStatusSummary(s),
+					UpgradeAvailable:   upgradeVersion,
+					upgradeDisplay:     upgradeDisplay,
+				})
+			}
 
-					// "?" only when we truly could not determine it. A successful
-					// fetch that simply lacks this shoot's cloud profile is a
-					// distinct case, flagged once so it is not silent.
-					upgrade := "?"
-					if versions, ok := profileVersions[s.CloudProfileName]; ok {
-						upgrade = upgradeAvailable(s.Kubernetes.Version, versions)
-					} else if profilesFetched {
-						upgrade = "?"
-						opts.warnf(cmd, "cloud profile %q for shoot %q was not found; UPGRADE unknown", s.CloudProfileName, s.Name)
-					}
-
+			header := []string{"NAME", "REGION", "K8S", "UPGRADE", "POOLS", "STATUS"}
+			return output.Render(cmd.OutOrStdout(), opts.output, views, func(w io.Writer) error {
+				if len(views) == 0 {
+					// Header to stdout, notice to stderr: piped consumers see an
+					// empty table, humans see why.
+					opts.infof(cmd, "No shoot clusters in project %s (region %s)", settings.ProjectID, settings.Region)
+					return output.Table(w, header, nil)
+				}
+				rows := make([][]string, 0, len(views))
+				for _, v := range views {
 					rows = append(rows, []string{
-						s.Name,
-						s.Region,
-						s.Kubernetes.Version,
-						upgrade,
-						strconv.Itoa(len(s.ShootProvider.Workers)),
-						status,
+						v.Name,
+						v.Region,
+						v.Kubernetes.Version,
+						v.upgradeDisplay,
+						strconv.Itoa(len(v.ShootProvider.Workers)),
+						v.StatusSummary,
 					})
 				}
 				return output.Table(w, header, rows)
@@ -203,7 +215,8 @@ func newShootKubeconfigCommand(opts *globalOptions) *cobra.Command {
 		Short: "Create a time-limited admin kubeconfig for a shoot cluster",
 		Long: `Create an admin kubeconfig for a shoot cluster and print it to stdout,
 or write it to a file with --file. The credential expires after --expiration
-(the API may cap the allowed validity).`,
+(the API may cap the allowed validity). A region and project must be selected
+(--region/--project-id, CLEURA_REGION/CLEURA_PROJECT_ID, or stored at login).`,
 		Example: `  cleura gardener shoot kubeconfig prod > prod.kubeconfig
   cleura gardener shoot kubeconfig prod --expiration 8h -f ~/.kube/prod.yaml
   KUBECONFIG=$(pwd)/prod.kubeconfig kubectl get nodes`,
@@ -251,7 +264,7 @@ or write it to a file with --file. The credential expires after --expiration
 			if err := writeSecretFile(file, []byte(kubeconfig)); err != nil {
 				return err
 			}
-			opts.infof(cmd, "Wrote admin kubeconfig for shoot %q to %s (valid %s)", name, file, expiration)
+			opts.infof(cmd, "Wrote admin kubeconfig for shoot %q to %s (requested validity %s; the API may cap it)", name, file, expiration)
 			return nil
 		},
 	}
@@ -265,14 +278,15 @@ or write it to a file with --file. The credential expires after --expiration
 // shootAction describes a shoot operation that takes no request body and
 // reports success via the HTTP status.
 type shootAction struct {
-	use, short, op, confirmed, example string
-	call                               func(ctx context.Context, client *cleura.Client, s config.Settings, name string) (*http.Response, []byte, error)
+	use, short, long, op, confirmed, example string
+	call                                     func(ctx context.Context, client *cleura.Client, s config.Settings, name string) (*http.Response, []byte, error)
 }
 
 func newShootActionCommand(opts *globalOptions, action shootAction) *cobra.Command {
 	return &cobra.Command{
 		Use:     action.use,
 		Short:   action.short,
+		Long:    action.long,
 		Example: action.example,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -293,6 +307,36 @@ func newShootActionCommand(opts *globalOptions, action shootAction) *cobra.Comma
 			return nil
 		},
 	}
+}
+
+// shootView is a shoot plus the CLI-computed columns. The full API shoot is
+// embedded so -o json/yaml keep every raw field; the computed fields are
+// added alongside. upgradeDisplay is table-only (unexported → not marshaled).
+type shootView struct {
+	api.GardenerShootShoot
+	StatusSummary    string `json:"status_summary" yaml:"status_summary"`
+	UpgradeAvailable string `json:"upgrade_available,omitempty" yaml:"upgrade_available,omitempty"`
+	upgradeDisplay   string
+}
+
+// shootStatusSummary is the human status word for a shoot: an in-flight
+// operation (with progress) beats the steady-state hibernation flag, which
+// stays true for the whole duration of a wake-up; a completed, non-hibernated
+// cluster reads as "ready" rather than the raw Gardener "Succeeded".
+func shootStatusSummary(s api.GardenerShootShoot) string {
+	if op := s.LastOperation; op != nil && op.Progress < 100 {
+		return fmt.Sprintf("%s (%s %d%%)", op.State, op.Type, op.Progress)
+	}
+	if s.Status != nil && s.Status.IsHibernated {
+		return "hibernated"
+	}
+	if op := s.LastOperation; op != nil {
+		if string(op.State) == "Succeeded" {
+			return "ready"
+		}
+		return string(op.State)
+	}
+	return ""
 }
 
 // upgradeAvailable returns the newest generally-available Kubernetes version
