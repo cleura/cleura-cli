@@ -121,6 +121,11 @@ selected profile are pointed out on stderr. The token value is never shown.`,
 		},
 	}
 	addOutputFlag(cmd, opts)
+	// config view explains how settings resolve, so it accepts every
+	// resolution input to preview it — including --region/--project-id,
+	// which are otherwise gardener/login-scoped. (--profile/--cloud/--api-url
+	// are already global.)
+	addProjectContextFlags(cmd, opts, false)
 	return cmd
 }
 

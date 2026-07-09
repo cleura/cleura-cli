@@ -23,8 +23,10 @@ cleura config view [flags]
 ### Options
 
 ```
-  -h, --help            help for view
-  -o, --output string   Output format: table, json, yaml (default "table")
+  -h, --help                help for view
+  -o, --output string       Output format: table, json, yaml (default "table")
+      --project-id string   OpenStack project ID [$CLEURA_PROJECT_ID]
+      --region string       OpenStack region (e.g. sto1) [$CLEURA_REGION]
 ```
 
 ### Options inherited from parent commands

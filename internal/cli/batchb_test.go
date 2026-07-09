@@ -21,8 +21,9 @@ func TestFlagPlacement(t *testing.T) {
 	// c.Flag walks local + inherited persistent flags.
 	has := func(c *cobra.Command, flag string) bool { return c.Flag(flag) != nil }
 
-	regionUsers := [][]string{{"gardener", "shoot", "list"}, {"gardener", "shoot", "wake"}, {"login"}}
-	regionNonUsers := [][]string{{"whoami"}, {"logout"}, {"user", "list"}, {"config", "view"}}
+	// config view also accepts them — it previews how any setting resolves.
+	regionUsers := [][]string{{"gardener", "shoot", "list"}, {"gardener", "shoot", "wake"}, {"login"}, {"config", "view"}}
+	regionNonUsers := [][]string{{"whoami"}, {"logout"}, {"user", "list"}, {"config", "set"}}
 	for _, p := range regionUsers {
 		if !has(at(p...), "region") || !has(at(p...), "project-id") {
 			t.Errorf("%v should have --region/--project-id", p)
