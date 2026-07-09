@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -31,10 +32,11 @@ func newUserListCommand(opts *globalOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List the users in the account",
-		Long: `List the users in the account with their privileges. The ROLES column
+		Long: `List the users in the account with their privileges. The PRIVILEGES column
 summarizes each privilege area as area:type (types: full, read, or
 project(n) for per-project grants), compressed to "full (all areas)" when
-every area has full access. Use 'cleura user get' for the full breakdown.
+every area has full access. The 2FA column counts only active enrollments.
+Use 'cleura user get' for the full breakdown.
 
 Viewing other users requires the users privilege or account administrator
 rights on the logged-in account.`,
@@ -59,12 +61,16 @@ rights on the logged-in account.`,
 			}
 			users := *resp.JSON200
 
-			header := []string{"ID", "USERNAME", "NAME", "EMAIL", "ADMIN", "2FA", "ROLES"}
+			header := []string{"ID", "USERNAME", "NAME", "EMAIL", "ADMIN", "2FA", "PRIVILEGES"}
 			return output.Render(cmd.OutOrStdout(), opts.output, users, func(w io.Writer) error {
 				if len(users) == 0 {
 					opts.infof(cmd, "No users in the account")
 					return output.Table(w, header, nil)
 				}
+				// Stable, scannable table; -o json keeps the API's order.
+				slices.SortFunc(users, func(a, b api.CommonUserLogin) int {
+					return strings.Compare(a.Name, b.Name)
+				})
 				rows := make([][]string, 0, len(users))
 				for _, u := range users {
 					rows = append(rows, []string{
@@ -109,7 +115,9 @@ func newUserGetCommand(opts *globalOptions) *cobra.Command {
 				kv := output.NewKVWriter(w)
 				kv.Row("ID", user.Id)
 				kv.Row("Username", user.Name)
-				kv.Row("Name", displayName(user.Firstname, user.Lastname))
+				if name := displayName(user.Firstname, user.Lastname); name != "" {
+					kv.Row("Name", name)
+				}
 				kv.Row("Email", strDeref(user.Email))
 				if pending := strDeref(user.PendingEmail); pending != "" {
 					kv.Row("Pending email", pending)
@@ -138,7 +146,11 @@ func newUserGetCommand(opts *globalOptions) *cobra.Command {
 					kv.Row("Language", lang)
 				}
 				if len(user.IpRestrictions) > 0 {
-					kv.Row("IP restrictions", strconv.Itoa(len(user.IpRestrictions)))
+					cidrs := make([]string, 0, len(user.IpRestrictions))
+					for _, r := range user.IpRestrictions {
+						cidrs = append(cidrs, r.Cidr)
+					}
+					kv.Row("IP restrictions", strings.Join(cidrs, ", "))
 				}
 				return kv.Flush()
 			})
@@ -157,20 +169,24 @@ func lookupUser(cmd *cobra.Command, settings config.Settings, client *cleura.Cli
 		return resp.JSON200, nil
 	}
 
-	if _, numErr := strconv.Atoi(arg); numErr != nil {
+	// An auth failure would fail the fallback identically — don't spend a
+	// second doomed request on it.
+	authFailed := resp.StatusCode() == 401 || resp.StatusCode() == 403
+	if _, numErr := strconv.Atoi(arg); numErr != nil && !authFailed {
 		// Not an ID — try it as a username.
 		list, err := client.IdentityListUsersWithResponse(cmd.Context())
 		if err != nil {
 			return nil, fmt.Errorf("looking up username %q: %w", arg, err)
 		}
-		if list.JSON200 != nil {
-			for i, u := range *list.JSON200 {
-				if u.Name == arg {
-					return &(*list.JSON200)[i], nil
-				}
-			}
-			return nil, fmt.Errorf("no user with ID or username %q", arg)
+		if list.JSON200 == nil {
+			return nil, apiAuthError("looking up username", settings, list.HTTPResponse, list.Body)
 		}
+		for i, u := range *list.JSON200 {
+			if u.Name == arg {
+				return &(*list.JSON200)[i], nil
+			}
+		}
+		return nil, fmt.Errorf("no user with ID or username %q", arg)
 	}
 	return nil, apiAuthError("fetching user", settings, resp.HTTPResponse, resp.Body)
 }
@@ -201,25 +217,57 @@ func yesNo(b bool) string {
 	return "no"
 }
 
-// hasTwoFactor reports whether any second factor is enrolled.
+// hasTwoFactor reports whether any ACTIVE second factor protects the account.
+// Enrollments awaiting verification provide no protection and do not count.
 func hasTwoFactor(t *api.CommonUserLoginTwoFactorLogin) bool {
 	if t == nil {
 		return false
 	}
-	return t.Sms != nil || (t.Webauthn != nil && len(*t.Webauthn) > 0)
+	if t.Sms != nil && t.Sms.Status == api.Active {
+		return true
+	}
+	if t.Webauthn != nil {
+		for _, key := range *t.Webauthn {
+			if key.Status == api.Active {
+				return true
+			}
+		}
+	}
+	return false
 }
 
-// twoFactorSummary names the enrolled methods, e.g. "sms" or "sms, webauthn (2 keys)".
+// twoFactorSummary names the enrolled methods and their state, e.g. "sms",
+// "sms (awaiting verification)", or "sms, webauthn (2 keys)".
 func twoFactorSummary(t *api.CommonUserLoginTwoFactorLogin) string {
-	if !hasTwoFactor(t) {
+	if t == nil {
 		return "none"
 	}
 	var methods []string
 	if t.Sms != nil {
-		methods = append(methods, "sms")
+		if t.Sms.Status == api.Active {
+			methods = append(methods, "sms")
+		} else {
+			methods = append(methods, "sms (awaiting verification)")
+		}
 	}
 	if t.Webauthn != nil && len(*t.Webauthn) > 0 {
-		methods = append(methods, fmt.Sprintf("webauthn (%d keys)", len(*t.Webauthn)))
+		active := 0
+		for _, key := range *t.Webauthn {
+			if key.Status == api.Active {
+				active++
+			}
+		}
+		switch {
+		case active == 1:
+			methods = append(methods, "webauthn (1 key)")
+		case active > 1:
+			methods = append(methods, fmt.Sprintf("webauthn (%d keys)", active))
+		default:
+			methods = append(methods, "webauthn (awaiting verification)")
+		}
+	}
+	if len(methods) == 0 {
+		return "none"
 	}
 	return strings.Join(methods, ", ")
 }
