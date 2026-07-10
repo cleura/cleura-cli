@@ -31,12 +31,8 @@ cleura whoami -o json     # machine-readable output
 
 cleura user list                                             # account users with their privileges
 cleura user get johndoe                                      # one user, full privilege breakdown
-cleura gardener shoot list --region sto1 --project-id <id>   # list Kubernetes clusters
-cleura gardener shoot kubeconfig prod > prod.kubeconfig      # time-limited admin kubeconfig
-cleura gardener shoot kubeconfig prod --expiration 8h -f ~/.kube/prod.yaml
-cleura gardener shoot hibernate prod                         # scale the cluster down
-cleura gardener shoot wake prod                              # wake it up again
-cleura gardener shoot reconcile prod                         # trigger a reconciliation
+cleura gardener shoot list --region sto1 --project-id <id>   # your Kubernetes clusters
+                                                             # (full Gardener tour below)
 
 cleura logout             # revoke and remove the stored token (do this last)
 ```
@@ -69,6 +65,56 @@ stored token.
 
 Ready-to-copy pipeline examples (GitHub Actions, GitLab CI, plain shell) live in
 [`examples/ci/`](examples/ci/).
+
+## Gardener Kubernetes clusters
+
+`cleura gardener` manages Cleura's Gardener-based Kubernetes. Most commands need
+a **region and project** — pass `--region`/`--project-id`, set
+`CLEURA_REGION`/`CLEURA_PROJECT_ID`, or store them in the profile at login.
+(Cloud profiles and `shoot check-name` are cloud-wide and need only a cloud.)
+
+Discover what's available (cloud-wide — no region/project needed):
+
+```sh
+cleura gardener cloud-profile list                 # machine types, Kubernetes versions, regions
+cleura gardener cloud-profile show cleuracloud      # one profile in detail (supported vs deprecated versions, with expiry)
+cleura gardener shoot check-name my-cluster         # is a shoot name free? (scripts: --exit-code → 0 free / 2 taken)
+cleura gardener project bootstrap                   # one-time: enable Gardener for the project
+```
+
+Inspect and access clusters:
+
+```sh
+cleura gardener shoot get prod                                # full detail: worker groups, maintenance, HA, networking, status
+cleura gardener worker-group list prod                        # a shoot's node pools
+cleura gardener shoot kubeconfig prod > prod.kubeconfig       # time-limited admin kubeconfig
+cleura gardener shoot ssh-key prod -f ~/.ssh/prod-nodes.pem   # node SSH private key (written 0600)
+```
+
+Day-2 operations:
+
+```sh
+cleura gardener shoot hibernate prod    # scale down to save cost (reversible with wake)
+cleura gardener shoot wake prod
+cleura gardener shoot reconcile prod    # run the reconcile loop now
+cleura gardener shoot maintain prod     # run the maintenance window now
+cleura gardener shoot retry prod        # retry the last failed operation
+cleura gardener shoot enable-ha prod --yes                    # highly-available control plane (irreversible; --yes for CI)
+cleura gardener shoot ca rotate prod --stage prepare          # rotate the cluster CA (two-phase: prepare, then complete)
+cleura gardener shoot ca status prod                          # rotation stage + the next action to take
+```
+
+Observability (needs a running cluster):
+
+```sh
+cleura gardener shoot monitoring credentials prod             # Prometheus/Plutono logins (passwords masked; --show-secrets to reveal)
+cleura gardener shoot monitoring nodes prod wg-primary        # per-node CPU/memory/pods for a worker group
+cleura gardener shoot monitoring worker-group prod wg-primary # worker-group aggregate metrics
+```
+
+Destructive operations (`enable-ha`, `ca rotate`, ...) ask for confirmation and
+refuse on a non-interactive terminal — pass `--yes` in CI. Every read command
+supports `-o json`/`-o yaml`.
 
 ## Configuration
 
@@ -105,7 +151,7 @@ or `~/.config/cleura/config.yaml`:
 current_profile: default
 profiles:
   default:
-    cloud: public            # public | compliant
+    cloud: public            # public, compliant, or a private cloud name (see acme)
     username: johndoe
     token: "..."             # stored by "cleura login"
     region: sto1             # optional defaults for project-scoped commands
@@ -131,7 +177,7 @@ Environment variables (shared with the
 | `CLEURA_API_USERNAME` | Username                                       |
 | `CLEURA_API_TOKEN`    | API token (skips `cleura login`); the API requires it **together with** `CLEURA_API_USERNAME` |
 | `CLEURA_API_PASSWORD` | Password for `cleura login` (CLI-only, never stored); the prompt-free CI login path |
-| `CLEURA_CLOUD`        | Named cloud: `public` or `compliant`           |
+| `CLEURA_CLOUD`        | Named cloud: `public`, `compliant`, or a private cloud's name (set with `CLEURA_API_URL`) |
 | `CLEURA_REGION`       | OpenStack region (e.g. `sto1`)                 |
 | `CLEURA_PROJECT_ID`   | OpenStack project ID                           |
 | `CLEURA_PROFILE`      | Profile to use                                 |
@@ -185,11 +231,14 @@ other exit is a malfunction. `--validate` verifies the token against the API
 first. Compatibility: fields are only added — never renamed or removed — while
 `version` is `1`; a breaking change bumps it, and consumers must check it.
 
-`config get-credentials` is the only versioned, stable JSON contract. The
-`-o json` output of other commands (`whoami`, `user`, `gardener shoot list`,
-`config view`) is for convenience: it mirrors the unversioned API plus a few
-CLI-computed fields and may change between releases, so don't build automation
-that depends on its exact shape.
+The `region`, `project_id`, `cloud` and `token_stored_at` fields are omitted
+when unset — in particular `cloud` is absent for a private cloud configured
+with only an `api_url` and no cloud name.
+
+`config get-credentials` is the only versioned, stable JSON contract. Every
+other command's `-o json`/`-o yaml` output is for convenience: it mirrors the
+unversioned API plus a few CLI-computed fields and may change between releases,
+so don't build automation that depends on its exact shape.
 
 ## Command reference
 

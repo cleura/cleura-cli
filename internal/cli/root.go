@@ -70,7 +70,7 @@ from.`,
 	// so they never appear on commands that would silently ignore them.
 	pf := root.PersistentFlags()
 	pf.StringVar(&opts.profile, "profile", "", "Configuration profile to use [$CLEURA_PROFILE] (default from config, or \"default\")")
-	pf.StringVar(&opts.cloud, "cloud", "", "Named cloud with a predefined API URL: public or compliant [$CLEURA_CLOUD]")
+	pf.StringVar(&opts.cloud, "cloud", "", "Named cloud: public, compliant, or a private cloud's name (with --api-url) [$CLEURA_CLOUD]")
 	pf.StringVar(&opts.apiURL, "api-url", "", "Cleura API base URL, required for private clouds; overrides --cloud [$CLEURA_API_URL]")
 	pf.BoolVar(&opts.debug, "debug", false, "Log HTTP requests and responses to stderr (credentials redacted)")
 	pf.BoolVarP(&opts.quiet, "quiet", "q", false, "Suppress informational messages; errors and requested output are still shown")

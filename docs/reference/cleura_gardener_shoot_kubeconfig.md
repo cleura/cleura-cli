@@ -36,7 +36,7 @@ cleura gardener shoot kubeconfig <shoot-name> [flags]
 
 ```
       --api-url string      Cleura API base URL, required for private clouds; overrides --cloud [$CLEURA_API_URL]
-      --cloud string        Named cloud with a predefined API URL: public or compliant [$CLEURA_CLOUD]
+      --cloud string        Named cloud: public, compliant, or a private cloud's name (with --api-url) [$CLEURA_CLOUD]
       --debug               Log HTTP requests and responses to stderr (credentials redacted)
       --profile string      Configuration profile to use [$CLEURA_PROFILE] (default from config, or "default")
       --project-id string   OpenStack project ID [$CLEURA_PROJECT_ID]
