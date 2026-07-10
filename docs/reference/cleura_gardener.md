@@ -35,5 +35,7 @@ cleura gardener [flags]
 ### SEE ALSO
 
 * [cleura](cleura.md)	 - Command-line interface for Cleura Cloud
+* [cleura gardener cloud-profile](cleura_gardener_cloud-profile.md)	 - Inspect Gardener cloud profiles (versions, machine types, images)
+* [cleura gardener project](cleura_gardener_project.md)	 - Manage Gardener enablement for a project
 * [cleura gardener shoot](cleura_gardener_shoot.md)	 - Manage shoot clusters
 

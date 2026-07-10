@@ -35,6 +35,8 @@ func TestGardenerHelpStatesProjectRequirement(t *testing.T) {
 		{"gardener", "shoot", "ssh-key"},
 		{"gardener", "shoot", "worker-group"},
 		{"gardener", "shoot", "worker-group", "list"},
+		{"gardener", "project"},
+		{"gardener", "project", "bootstrap"},
 	} {
 		c, _, err := root.Find(path)
 		if err != nil {

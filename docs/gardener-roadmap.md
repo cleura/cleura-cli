@@ -13,12 +13,11 @@ supersedes the backlog's `shoot get`, `project list`-adjacent discovery, and
 
 ## Where we are
 
-- **Done (18 of 29 operations):** the 5 original commands (`shoot
-  list/kubeconfig/wake/hibernate/reconcile`) **plus roadmap batches B (reads),
-  D (day-2) and F (observability), shipped 2026-07-10.**
-- **Remaining (11 operations):** batch A (cloud-profiles + bootstrap), C
-  (shoot create/edit/delete), E (worker CRUD + upgrade-conditions), and the
-  cross-cutting `--wait` poller (G).
+- **Done (20 of 29 operations):** the 5 original commands (`shoot
+  list/kubeconfig/wake/hibernate/reconcile`) **plus roadmap batches A (discovery
+  + bootstrap), B (reads), D (day-2) and F (observability), shipped 2026-07-10.**
+- **Remaining (9 operations):** C (shoot create/edit/delete), E (worker-group
+  CRUD + upgrade-conditions), and the cross-cutting `--wait` poller (G).
 - **SDK:** the generated client (`cleura-client-go/api`) already exposes a
   `*WithResponse` method for **all 29** operations — nothing to regenerate. Two
   operations need a raw-body read helper (see [SDK work](#sdk--cleura-client-go-work));
@@ -100,7 +99,7 @@ Ordered by dependency (discovery → reads → writes → day-2 → advanced →
 → polling) and user value. Each is a small, independently verifiable increment in
 the established A/B/C/D style.
 
-### Batch A — Discovery & bootstrap (the pre-create spine) · effort M
+### Batch A — Discovery & bootstrap (the pre-create spine) · effort M · ✅ SHIPPED 2026-07-10
 **Commands:** `cloud-profile list`, `cloud-profile show <name>`, `project bootstrap`
 Read-only + a trivial 204 write: the safest first increment, and it unblocks
 everything. `cloud-profiles` is the single source that create/edit/worker/upgrade

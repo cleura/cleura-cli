@@ -156,7 +156,7 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 		newWorkerGroupCommand(opts),
 	)
 
-	cmd.AddCommand(shoot)
+	cmd.AddCommand(shoot, newCloudProfileCommand(opts), newGardenerProjectCommand(opts))
 	return cmd
 }
 
