@@ -1,6 +1,6 @@
 ## cleura gardener shoot ssh-key
 
-Fetch the shoot's node SSH private key
+Fetch a shoot's node SSH private key
 
 ### Synopsis
 

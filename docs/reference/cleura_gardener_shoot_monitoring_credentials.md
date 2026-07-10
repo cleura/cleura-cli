@@ -1,6 +1,6 @@
 ## cleura gardener shoot monitoring credentials
 
-Show the shoot's monitoring (Prometheus/Plutono) credentials
+Show a shoot's monitoring (Prometheus/Plutono) credentials
 
 ### Synopsis
 

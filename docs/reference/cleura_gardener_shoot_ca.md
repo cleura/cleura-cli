@@ -35,6 +35,6 @@ cleura gardener shoot ca [flags]
 ### SEE ALSO
 
 * [cleura gardener shoot](cleura_gardener_shoot.md)	 - Manage shoot clusters
-* [cleura gardener shoot ca rotate](cleura_gardener_shoot_ca_rotate.md)	 - Drive a two-phase CA rotation
+* [cleura gardener shoot ca rotate](cleura_gardener_shoot_ca_rotate.md)	 - Rotate a shoot's certificate authority
 * [cleura gardener shoot ca status](cleura_gardener_shoot_ca_status.md)	 - Show a shoot's CA rotation stage
 

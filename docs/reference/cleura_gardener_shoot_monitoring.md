@@ -36,7 +36,7 @@ cleura gardener shoot monitoring [flags]
 ### SEE ALSO
 
 * [cleura gardener shoot](cleura_gardener_shoot.md)	 - Manage shoot clusters
-* [cleura gardener shoot monitoring credentials](cleura_gardener_shoot_monitoring_credentials.md)	 - Show the shoot's monitoring (Prometheus/Plutono) credentials
+* [cleura gardener shoot monitoring credentials](cleura_gardener_shoot_monitoring_credentials.md)	 - Show a shoot's monitoring (Prometheus/Plutono) credentials
 * [cleura gardener shoot monitoring node](cleura_gardener_shoot_monitoring_node.md)	 - Show detailed metrics for one node
 * [cleura gardener shoot monitoring nodes](cleura_gardener_shoot_monitoring_nodes.md)	 - Show per-node resource usage for a worker group
 * [cleura gardener shoot monitoring worker-group](cleura_gardener_shoot_monitoring_worker-group.md)	 - Show aggregate metrics for a worker group

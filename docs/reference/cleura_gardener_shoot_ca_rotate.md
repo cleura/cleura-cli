@@ -1,6 +1,6 @@
 ## cleura gardener shoot ca rotate
 
-Drive a two-phase CA rotation
+Rotate a shoot's certificate authority
 
 ### Synopsis
 

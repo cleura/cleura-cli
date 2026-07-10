@@ -1,6 +1,6 @@
 ## cleura gardener shoot retry
 
-Retry the shoot's last failed operation
+Retry a shoot's last failed operation
 
 ### Synopsis
 

@@ -102,7 +102,7 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 		}),
 		newShootActionCommand(opts, shootAction{
 			use:   "maintain <shoot-name>",
-			short: "Run the shoot's maintenance operation now",
+			short: "Run a shoot's maintenance operation now",
 			long: "Run the shoot's maintenance operation immediately instead of waiting for its\n" +
 				"scheduled window. It applies pending Kubernetes/OS updates and may roll nodes.\n\n" + projectScopedHelp,
 			op:        "triggering maintenance",
@@ -118,7 +118,7 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 		}),
 		newShootActionCommand(opts, shootAction{
 			use:   "retry <shoot-name>",
-			short: "Retry the shoot's last failed operation",
+			short: "Retry a shoot's last failed operation",
 			long: "Retry the shoot's last failed operation — for example after a transient\n" +
 				"infrastructure error — instead of waiting for the next reconciliation.\n\n" + projectScopedHelp,
 			op:        "retrying shoot operation",
@@ -739,7 +739,7 @@ func newShootCARotateCommand(opts *globalOptions) *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
 		Use:   "rotate <shoot-name> --stage prepare|complete",
-		Short: "Drive a two-phase CA rotation",
+		Short: "Rotate a shoot's certificate authority",
 		Long: "Rotate a shoot's certificate authorities in two stages:\n" +
 			"  --stage prepare    start the rotation (new CAs are issued alongside the old)\n" +
 			"  --stage complete   finish it (the old CAs are dropped)\n\n" +
@@ -945,7 +945,7 @@ func newShootMonitoringCredentialsCommand(opts *globalOptions) *cobra.Command {
 	var showSecrets bool
 	cmd := &cobra.Command{
 		Use:   "credentials <shoot-name>",
-		Short: "Show the shoot's monitoring (Prometheus/Plutono) credentials",
+		Short: "Show a shoot's monitoring (Prometheus/Plutono) credentials",
 		Long: "Show the Prometheus and Plutono dashboard URLs and logins for a shoot.\n\n" +
 			"Passwords are masked in table output; reveal them with --show-secrets or\n-o json/yaml.\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot monitoring credentials prod\n  cleura gardener shoot monitoring credentials prod --show-secrets",
@@ -1152,7 +1152,7 @@ func newShootSSHKeyCommand(opts *globalOptions) *cobra.Command {
 	var stdout bool
 	cmd := &cobra.Command{
 		Use:   "ssh-key <shoot-name>",
-		Short: "Fetch the shoot's node SSH private key",
+		Short: "Fetch a shoot's node SSH private key",
 		Long: "Fetch the SSH private key for a shoot's nodes.\n\n" +
 			"This is a secret: write it to a 0600 file with --file, or print it to\nstdout with --stdout (exactly one is required).\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot ssh-key prod -f ~/.ssh/prod-nodes.pem\n  cleura gardener shoot ssh-key prod --stdout",

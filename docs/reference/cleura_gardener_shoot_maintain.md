@@ -1,6 +1,6 @@
 ## cleura gardener shoot maintain
 
-Run the shoot's maintenance operation now
+Run a shoot's maintenance operation now
 
 ### Synopsis
 
