@@ -4,7 +4,7 @@ Run a shoot's maintenance operation now
 
 ### Synopsis
 
-Run the shoot's maintenance operation immediately instead of waiting for its
+Run a shoot's maintenance operation immediately instead of waiting for its
 scheduled window. It applies pending Kubernetes/OS updates and may roll nodes.
 
 A region and project must be selected for gardener commands: pass

@@ -4,7 +4,7 @@ Retry a shoot's last failed operation
 
 ### Synopsis
 
-Retry the shoot's last failed operation — for example after a transient
+Retry a shoot's last failed operation — for example after a transient
 infrastructure error — instead of waiting for the next reconciliation.
 
 A region and project must be selected for gardener commands: pass

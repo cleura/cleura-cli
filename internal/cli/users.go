@@ -64,28 +64,44 @@ rights on the logged-in account.`,
 			if resp.JSON200 == nil {
 				return userAuthError("listing users", settings, resp.HTTPResponse, resp.Body)
 			}
-			users := *resp.JSON200
+			// Build the view model before rendering so the CLI-computed columns
+			// (2FA active, privilege summary) also land in -o json/yaml, matching
+			// the gardener list commands.
+			type userListView struct {
+				api.CommonUserLogin
+				TwoFactorActive   bool   `json:"two_factor_active" yaml:"two_factor_active"`
+				PrivilegesSummary string `json:"privileges_summary" yaml:"privileges_summary"`
+			}
+			views := make([]userListView, 0, len(*resp.JSON200))
+			for _, u := range *resp.JSON200 {
+				views = append(views, userListView{
+					CommonUserLogin:   u,
+					TwoFactorActive:   hasTwoFactor(u.TwoFactorLogin),
+					PrivilegesSummary: rolesSummary(u.Privileges),
+				})
+			}
 
 			header := []string{"ID", "USERNAME", "NAME", "EMAIL", "ADMIN", "2FA", "PRIVILEGES"}
-			return output.Render(cmd.OutOrStdout(), opts.output, users, func(w io.Writer) error {
-				if len(users) == 0 {
+			return output.Render(cmd.OutOrStdout(), opts.output, views, func(w io.Writer) error {
+				if len(views) == 0 {
 					opts.infof(cmd, "No users in the account")
 					return output.Table(w, header, nil)
 				}
-				// Stable, scannable table; -o json keeps the API's order.
-				slices.SortFunc(users, func(a, b api.CommonUserLogin) int {
+				// Stable, scannable table; -o json/yaml keep the API's order.
+				sorted := append([]userListView(nil), views...)
+				slices.SortFunc(sorted, func(a, b userListView) int {
 					return strings.Compare(a.Name, b.Name)
 				})
-				rows := make([][]string, 0, len(users))
-				for _, u := range users {
+				rows := make([][]string, 0, len(sorted))
+				for _, v := range sorted {
 					rows = append(rows, []string{
-						strconv.Itoa(u.Id),
-						u.Name,
-						displayName(u.Firstname, u.Lastname),
-						strDeref(u.Email),
-						yesNo(u.Admin),
-						yesNo(hasTwoFactor(u.TwoFactorLogin)),
-						rolesSummary(u.Privileges),
+						strconv.Itoa(v.Id),
+						v.Name,
+						displayName(v.Firstname, v.Lastname),
+						strDeref(v.Email),
+						yesNo(v.Admin),
+						yesNo(v.TwoFactorActive),
+						v.PrivilegesSummary,
 					})
 				}
 				return output.Table(w, header, rows)
@@ -98,8 +114,9 @@ rights on the logged-in account.`,
 
 func newUserGetCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get <user-id or username>",
-		Short: "Show one user with the full privilege breakdown",
+		Use:               "get <user-id or username>",
+		ValidArgsFunction: noFileComp,
+		Short:             "Show one user with the full privilege breakdown",
 		Long: `Show one user (by numeric ID or exact username) with the full privilege
 breakdown. Viewing another user requires the 'users' privilege or account
 administrator rights; to see your own account without that privilege, use

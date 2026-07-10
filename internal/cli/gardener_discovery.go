@@ -84,8 +84,9 @@ func newCloudProfileListCommand(opts *globalOptions) *cobra.Command {
 
 func newCloudProfileShowCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "show <profile-name>",
-		Short: "Show a cloud profile in detail",
+		Use:               "show <profile-name>",
+		ValidArgsFunction: noFileComp,
+		Short:             "Show a cloud profile in detail",
 		Long: "Show one Gardener cloud profile in detail: its Kubernetes versions (with any\n" +
 			"non-supported ones flagged), machine types, machine images, regions/zones and\n" +
 			"volume types. Find the profile names with 'cleura gardener cloud-profile list'.\n\n" + cloudOnlyHelp,

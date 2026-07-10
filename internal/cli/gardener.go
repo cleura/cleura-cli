@@ -103,7 +103,7 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 		newShootActionCommand(opts, shootAction{
 			use:   "maintain <shoot-name>",
 			short: "Run a shoot's maintenance operation now",
-			long: "Run the shoot's maintenance operation immediately instead of waiting for its\n" +
+			long: "Run a shoot's maintenance operation immediately instead of waiting for its\n" +
 				"scheduled window. It applies pending Kubernetes/OS updates and may roll nodes.\n\n" + projectScopedHelp,
 			op:        "triggering maintenance",
 			confirmed: "Requested maintenance of shoot %q; watch progress with 'cleura gardener shoot list'",
@@ -119,7 +119,7 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 		newShootActionCommand(opts, shootAction{
 			use:   "retry <shoot-name>",
 			short: "Retry a shoot's last failed operation",
-			long: "Retry the shoot's last failed operation — for example after a transient\n" +
+			long: "Retry a shoot's last failed operation — for example after a transient\n" +
 				"infrastructure error — instead of waiting for the next reconciliation.\n\n" + projectScopedHelp,
 			op:        "retrying shoot operation",
 			confirmed: "Requested retry of shoot %q; watch progress with 'cleura gardener shoot list'",
@@ -215,6 +215,36 @@ func rejectProjectContextFlags(cmd *cobra.Command) error {
 		}
 	}
 	return nil
+}
+
+// completeShootName offers existing shoot names for a <shoot-name> positional
+// (first arg only), fetched live. It never offers filenames and degrades to no
+// completion on any error or for later args.
+func completeShootName(opts *globalOptions) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) != 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		settings, client, err := gardenerContext(opts)
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		resp, err := client.GardenerListShootsWithResponse(cmd.Context(), settings.Cloud, settings.Region, settings.ProjectID)
+		if err != nil || resp.JSON200 == nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		names := make([]string, 0, len(*resp.JSON200))
+		for _, s := range *resp.JSON200 {
+			names = append(names, s.Name)
+		}
+		return names, cobra.ShellCompDirectiveNoFileComp
+	}
+}
+
+// noFileComp disables filename completion for a resource-name positional that
+// has no cheap dynamic completion, so the shell stops offering local files.
+func noFileComp(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
 func newShootListCommand(opts *globalOptions) *cobra.Command {
@@ -371,8 +401,9 @@ func hibernationScheduleText(sc api.GardenerShootHibernationSchedule) string {
 
 func newShootGetCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get <shoot-name>",
-		Short: "Show detailed information about a shoot cluster",
+		Use:               "get <shoot-name>",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "Show detailed information about a shoot cluster",
 		Long: "Show detailed information about a single shoot cluster — worker groups,\n" +
 			"maintenance window, hibernation schedule, networking, high availability and\n" +
 			"status — that the summary 'shoot list' omits.\n\n" + projectScopedHelp,
@@ -453,11 +484,11 @@ type checkNameView struct {
 func newShootCheckNameCommand(opts *globalOptions) *cobra.Command {
 	var exitCode bool
 	cmd := &cobra.Command{
-		Use:   "check-name <shoot-name>",
-		Short: "Check whether a shoot name is available in the cloud",
+		Use:               "check-name <shoot-name>",
+		ValidArgsFunction: noFileComp,
+		Short:             "Check whether a shoot name is available in the cloud",
 		Long: "Check whether a shoot name is already taken in the selected cloud.\n\n" +
-			"This is a cloud-wide check: it needs a cloud (--cloud/profile) but no\n" +
-			"region or project.\n\nWith --exit-code the command is a script predicate: it exits 0 if the name\n" +
+			cloudOnlyHelp + "\n\nWith --exit-code the command is a script predicate: it exits 0 if the name\n" +
 			"is available, 2 if it is taken, and 1 (or another non-zero) if the check\n" +
 			"itself failed — so 'taken' is never confused with an error.",
 		Example: "  cleura gardener shoot check-name prod\n" +
@@ -543,8 +574,9 @@ func newWorkerGroupCommand(opts *globalOptions) *cobra.Command {
 
 func newWorkerGroupListCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list <shoot-name>",
-		Short: "List a shoot's worker groups",
+		Use:               "list <shoot-name>",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "List a shoot's worker groups",
 		Long: "List the worker groups (node pools) of a shoot: machine type, node-count\n" +
 			"range, rolling-update surge and zones.\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot worker-group list prod\n  cleura gardener shoot worker-group list prod -o json",
@@ -601,8 +633,9 @@ func newShootKubeconfigCommand(opts *globalOptions) *cobra.Command {
 	var file string
 
 	cmd := &cobra.Command{
-		Use:   "kubeconfig <shoot-name>",
-		Short: "Create a time-limited admin kubeconfig for a shoot cluster",
+		Use:               "kubeconfig <shoot-name>",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "Create a time-limited admin kubeconfig for a shoot cluster",
 		Long: "Create an admin kubeconfig for a shoot cluster and print it to stdout,\n" +
 			"or write it to a file with --file. The credential expires after --expiration\n" +
 			"(the API may cap the allowed validity).\n\n" + projectScopedHelp,
@@ -678,11 +711,12 @@ type shootAction struct {
 func newShootActionCommand(opts *globalOptions, action shootAction) *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
-		Use:     action.use,
-		Short:   action.short,
-		Long:    action.long,
-		Example: action.example,
-		Args:    cobra.ExactArgs(1),
+		Use:               action.use,
+		Short:             action.short,
+		Long:              action.long,
+		Example:           action.example,
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: completeShootName(opts),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			settings, client, err := gardenerContext(opts)
@@ -749,8 +783,9 @@ func newShootCARotateCommand(opts *globalOptions) *cobra.Command {
 	var stage string
 	var yes bool
 	cmd := &cobra.Command{
-		Use:   "rotate <shoot-name> --stage prepare|complete",
-		Short: "Rotate a shoot's certificate authority",
+		Use:               "rotate <shoot-name> --stage prepare|complete",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "Rotate a shoot's certificate authority",
 		Long: "Rotate a shoot's certificate authorities in two stages:\n" +
 			"  --stage prepare    start the rotation (new CAs are issued alongside the old)\n" +
 			"  --stage complete   finish it (the old CAs are dropped)\n\n" +
@@ -838,11 +873,12 @@ func caNextAction(name string, stage api.K8sCaRotationStage) string {
 
 func newShootCAStatusCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "status <shoot-name>",
-		Short:   "Show a shoot's CA rotation stage",
-		Long:    "Show the current certificate-authority rotation stage of a shoot and the next action to take.\n\n" + projectScopedHelp,
-		Example: "  cleura gardener shoot ca status prod",
-		Args:    cobra.ExactArgs(1),
+		Use:               "status <shoot-name>",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "Show a shoot's CA rotation stage",
+		Long:              "Show the current certificate-authority rotation stage of a shoot and the next action to take.\n\n" + projectScopedHelp,
+		Example:           "  cleura gardener shoot ca status prod",
+		Args:              cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			settings, client, err := gardenerContext(opts)
@@ -921,13 +957,26 @@ func latestSample(samples []api.GardenerSample) string {
 	return samples[len(samples)-1].Value
 }
 
-// latestWithUnit is latestSample with the unit appended (nothing appended when
-// the series is empty). Percent takes no space ("4.4%"); other units do
-// ("0.02 cores", "1.25 GiB").
+// latestWithUnit is latestSample rounded to a consistent per-unit precision
+// with the unit appended (nothing appended when the series is empty). The API
+// returns varying decimal places across endpoints, so this normalizes them —
+// cores to 3dp, GiB to 2dp, percent to 1dp — matching fmtCores/bytesToGiB/
+// fmtPercent elsewhere; a non-numeric sample falls back to its raw string.
+// Percent takes no space ("6.2%"); other units do ("0.104 cores", "0.83 GiB").
 func latestWithUnit(samples []api.GardenerSample, unit string) string {
 	v := latestSample(samples)
 	if v == "-" {
 		return v
+	}
+	if f, err := strconv.ParseFloat(v, 64); err == nil {
+		switch unit {
+		case "%":
+			v = strconv.FormatFloat(f, 'f', 1, 64)
+		case "cores":
+			v = strconv.FormatFloat(f, 'f', 3, 64)
+		case "GiB":
+			v = strconv.FormatFloat(f, 'f', 2, 64)
+		}
 	}
 	if unit == "%" {
 		return v + "%"
@@ -955,8 +1004,9 @@ func newShootMonitoringCommand(opts *globalOptions) *cobra.Command {
 func newShootMonitoringCredentialsCommand(opts *globalOptions) *cobra.Command {
 	var showSecrets bool
 	cmd := &cobra.Command{
-		Use:   "credentials <shoot-name>",
-		Short: "Show a shoot's monitoring (Prometheus/Plutono) credentials",
+		Use:               "credentials <shoot-name>",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "Show a shoot's monitoring (Prometheus/Plutono) credentials",
 		Long: "Show the Prometheus and Plutono dashboard URLs and logins for a shoot.\n\n" +
 			"Passwords are masked in table output; reveal them with --show-secrets or\n-o json/yaml.\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot monitoring credentials prod\n  cleura gardener shoot monitoring credentials prod --show-secrets",
@@ -1000,8 +1050,9 @@ func newShootMonitoringCredentialsCommand(opts *globalOptions) *cobra.Command {
 func newShootMonitoringNodesCommand(opts *globalOptions) *cobra.Command {
 	var namesOnly bool
 	cmd := &cobra.Command{
-		Use:   "nodes <shoot-name> <worker-group>",
-		Short: "Show per-node resource usage for a worker group",
+		Use:               "nodes <shoot-name> <worker-group>",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "Show per-node resource usage for a worker group",
 		Long: "Show a per-node snapshot of CPU (used/idle), memory (used/free) and pod\n" +
 			"count for a worker group. With --names-only, print just the node names\n" +
 			"(useful for scripts).\n\n" + overviewUnitsHelp + "\n\n" + projectScopedHelp,
@@ -1073,8 +1124,9 @@ func newShootMonitoringNodesCommand(opts *globalOptions) *cobra.Command {
 
 func newShootMonitoringNodeCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "node <shoot-name> <node-name>",
-		Short: "Show detailed metrics for one node",
+		Use:               "node <shoot-name> <node-name>",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "Show detailed metrics for one node",
 		Long: "Show detailed metrics for a single node. The table shows the latest\n" +
 			"snapshot; -o json/yaml carry the full time series.\n\n" + metricsUnitsHelp + "\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot monitoring node prod prod-default-abc12\n  cleura gardener shoot monitoring node prod prod-default-abc12 -o json",
@@ -1117,8 +1169,9 @@ func newShootMonitoringNodeCommand(opts *globalOptions) *cobra.Command {
 
 func newShootMonitoringWorkerGroupCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "worker-group <shoot-name> <worker-group>",
-		Short: "Show aggregate metrics for a worker group",
+		Use:               "worker-group <shoot-name> <worker-group>",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "Show aggregate metrics for a worker group",
 		Long: "Show aggregate CPU/memory/node/pod metrics for a worker group. The table\n" +
 			"shows the latest sample; -o json/yaml carry the full time series.\n\n" +
 			metricsUnitsHelp + "\n\nManage worker groups with 'cleura gardener shoot worker-group'.\n\n" + projectScopedHelp,
@@ -1162,8 +1215,9 @@ func newShootSSHKeyCommand(opts *globalOptions) *cobra.Command {
 	var file string
 	var stdout bool
 	cmd := &cobra.Command{
-		Use:   "ssh-key <shoot-name>",
-		Short: "Fetch a shoot's node SSH private key",
+		Use:               "ssh-key <shoot-name>",
+		ValidArgsFunction: completeShootName(opts),
+		Short:             "Fetch a shoot's node SSH private key",
 		Long: "Fetch the SSH private key for a shoot's nodes.\n\n" +
 			"This is a secret: write it to a 0600 file with --file, or print it to\nstdout with --stdout (exactly one is required).\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot ssh-key prod -f ~/.ssh/prod-nodes.pem\n  cleura gardener shoot ssh-key prod --stdout",

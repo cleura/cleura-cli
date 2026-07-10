@@ -118,10 +118,11 @@ func addProjectContextFlags(cmd *cobra.Command, opts *globalOptions, persistent 
 
 func newVersionCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "version",
-		Short: "Show the cleura version",
-		Long:  "Show the cleura CLI version. Use -o json for a machine-readable value.",
-		Args:  cobra.NoArgs,
+		Use:     "version",
+		Short:   "Show the cleura version",
+		Long:    "Show the cleura CLI version. Use -o json for a machine-readable value.",
+		Example: "  cleura version\n  cleura version -o json",
+		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := struct {
 				Version string `json:"version" yaml:"version"`

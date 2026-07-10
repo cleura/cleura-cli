@@ -4,8 +4,9 @@ Show the currently authenticated user
 
 ### Synopsis
 
-Show the account the current credentials authenticate as — the user's ID, name
-and privileges — to confirm which identity and profile are in effect.
+Show the account the current credentials authenticate as — its ID, username,
+email and whether it is an account admin — to confirm which identity and
+profile are in effect. For the full privilege breakdown, use 'cleura user get'.
 
 ```
 cleura whoami [flags]

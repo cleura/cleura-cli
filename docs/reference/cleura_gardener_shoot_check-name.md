@@ -6,7 +6,7 @@ Check whether a shoot name is available in the cloud
 
 Check whether a shoot name is already taken in the selected cloud.
 
-This is a cloud-wide check: it needs a cloud (--cloud/profile) but no
+This is cloud-wide: it needs a cloud (--cloud, or the profile's cloud), but no
 region or project.
 
 With --exit-code the command is a script predicate: it exits 0 if the name

@@ -56,20 +56,26 @@ func TestFmtPercent(t *testing.T) {
 }
 
 func TestLatestWithUnit(t *testing.T) {
-	series := []api.GardenerSample{{Value: "1.25"}}
-	if got := latestWithUnit(series, "GiB"); got != "1.25 GiB" {
-		t.Errorf("GiB unit = %q, want 1.25 GiB", got)
+	sample := func(v string) []api.GardenerSample { return []api.GardenerSample{{Value: v}} }
+	tests := []struct {
+		samples []api.GardenerSample
+		unit    string
+		want    string
+	}{
+		// Rounded to a consistent per-unit precision: GiB 2dp, cores 3dp, % 1dp.
+		{sample("0.8327"), "GiB", "0.83 GiB"},
+		{sample("1.25"), "GiB", "1.25 GiB"},
+		{sample("0.1041"), "cores", "0.104 cores"},
+		{sample("0.02"), "cores", "0.020 cores"},
+		{sample("6.2074"), "%", "6.2%"}, // percent takes no leading space
+		{sample("4.39"), "%", "4.4%"},
+		{nil, "GiB", "-"},                     // empty series: no unit appended
+		{sample("n/a"), "cores", "n/a cores"}, // non-numeric: raw value, unit appended
 	}
-	if got := latestWithUnit([]api.GardenerSample{{Value: "0.02"}}, "cores"); got != "0.02 cores" {
-		t.Errorf("cores unit = %q, want 0.02 cores", got)
-	}
-	// Percent takes no leading space.
-	if got := latestWithUnit([]api.GardenerSample{{Value: "4.39"}}, "%"); got != "4.39%" {
-		t.Errorf("percent unit = %q, want 4.39%% (no space)", got)
-	}
-	// Empty series: no unit appended.
-	if got := latestWithUnit(nil, "GiB"); got != "-" {
-		t.Errorf("empty series with unit = %q, want -", got)
+	for _, tt := range tests {
+		if got := latestWithUnit(tt.samples, tt.unit); got != tt.want {
+			t.Errorf("latestWithUnit(%v, %q) = %q, want %q", tt.samples, tt.unit, got, tt.want)
+		}
 	}
 }
 
