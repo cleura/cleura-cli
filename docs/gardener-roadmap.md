@@ -13,12 +13,16 @@ supersedes the backlog's `shoot get`, `project list`-adjacent discovery, and
 
 ## Where we are
 
-- **Done (5):** `shoot list`, `shoot kubeconfig`, `shoot wake`, `shoot hibernate`,
-  `shoot reconcile`.
-- **To build (24):** everything below.
+- **Done (18 of 29 operations):** the 5 original commands (`shoot
+  list/kubeconfig/wake/hibernate/reconcile`) **plus roadmap batches B (reads),
+  D (day-2) and F (observability), shipped 2026-07-10.**
+- **Remaining (11 operations):** batch A (cloud-profiles + bootstrap), C
+  (shoot create/edit/delete), E (worker CRUD + upgrade-conditions), and the
+  cross-cutting `--wait` poller (G).
 - **SDK:** the generated client (`cleura-client-go/api`) already exposes a
   `*WithResponse` method for **all 29** operations — nothing to regenerate. Two
-  operations need a raw-body read helper (see [SDK work](#sdk--cleura-client-go-work)).
+  operations need a raw-body read helper (see [SDK work](#sdk--cleura-client-go-work));
+  `shoot ssh-key` (batch F) currently inlines that workaround like `kubeconfig` does.
 
 ## Design principles (carried from the existing CLI)
 
@@ -109,7 +113,7 @@ reuse for **both** shell completion and client-side validation (k8s versions
   success is `StatusCode()/100==2`; a 400 falls through to raw `Body`. A 404 likely
   means wrong region/project or Gardener not offered there — surface both.
 
-### Batch B — Reads & view-models (read before write) · effort M
+### Batch B — Reads & view-models (read before write) · effort M · ✅ SHIPPED 2026-07-10
 **Commands:** `shoot get <name>`, `shoot check-name <name>`, `worker list <shoot>`
 Establishes the reusable machinery the write batches consume: `shootDetailView`
 (embed `GardenerShootShoot` + per-pool workers, maintenance window, hibernation
@@ -153,7 +157,7 @@ destructive confirmation.
   first destructive command. Refuse downgrades; surface `JSON400` field messages
   verbatim.
 
-### Batch D — Day-2 operations & CA rotation · effort L
+### Batch D — Day-2 operations & CA rotation · effort L · ✅ SHIPPED 2026-07-10
 **Commands:** `shoot maintain`, `shoot retry`, `shoot enable-ha`, `shoot ca rotate --stage prepare|complete`, `shoot ca status`
 - `maintain`/`retry` are textbook `shootAction` fits (no body, 2xx=success).
 - `enable-ha` is the **sole** HA-enablement path (edit rejects HA) and the first
@@ -188,7 +192,7 @@ refuses NotReady unless `--force`, confirms unless `--yes`, then PUTs. `revert` 
 exit 0 on success; with the flag, 0=ready, 2=not-ready; exit 1 stays reserved for
 real errors.
 
-### Batch F — Observability & secrets · effort L
+### Batch F — Observability & secrets · effort L · ✅ SHIPPED 2026-07-10
 **Commands:** `shoot monitoring credentials|nodes|node|worker`, `shoot ssh-key`
 Self-contained read family + the second raw-body secret.
 - **Coverage fix:** `nodes` (default) invokes `getShootWorkerGroupNodesOverview`;
@@ -308,6 +312,12 @@ three upgrade ops are the only Gardener ops taking a `*Params` struct (a require
 **Delivery:**
 - Batch E ships as E1 (worker) + E2 (upgrade) to keep the verification cadence —
   confirm that's preferred over one atomic XL batch.
+- Shipped decision (batch B): cloud-only `shoot check-name` inherits
+  `--region/--project-id` from the gardener parent and **rejects** them if
+  explicitly passed (rather than hiding them, which the shared persistent flag
+  makes awkward). When batch A adds more cloud-only commands (`cloud-profile`),
+  reconsider attaching the project-context flags per-command instead of
+  persistently on the parent, so they can be genuinely hidden where unused.
 
 ---
 *Provenance: designed by a fan-out/synthesis/critique/refine workflow over the live
