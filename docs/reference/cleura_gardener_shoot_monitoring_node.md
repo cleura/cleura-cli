@@ -7,6 +7,8 @@ Show detailed metrics for one node
 Show detailed metrics for a single node. The table shows the latest
 snapshot; -o json/yaml carry the full time series.
 
+Values are in cores (CPU), GiB (memory and filesystem) and percent (utilization).
+
 A region and project must be selected for gardener commands: pass
 --region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
 profile with 'cleura login'.

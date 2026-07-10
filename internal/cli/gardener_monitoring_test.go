@@ -36,6 +36,33 @@ func TestLatestSample(t *testing.T) {
 	}
 }
 
+func TestFmtPercent(t *testing.T) {
+	if got := fmtPercent(4.391667); got != "4.4%" {
+		t.Errorf("fmtPercent(4.391667) = %q, want 4.4%%", got)
+	}
+	if got := fmtPercent(33.35398); got != "33.4%" {
+		t.Errorf("fmtPercent(33.35398) = %q, want 33.4%%", got)
+	}
+}
+
+func TestLatestWithUnit(t *testing.T) {
+	series := []api.GardenerSample{{Value: "1.25"}}
+	if got := latestWithUnit(series, "GiB"); got != "1.25 GiB" {
+		t.Errorf("GiB unit = %q, want 1.25 GiB", got)
+	}
+	if got := latestWithUnit([]api.GardenerSample{{Value: "0.02"}}, "cores"); got != "0.02 cores" {
+		t.Errorf("cores unit = %q, want 0.02 cores", got)
+	}
+	// Percent takes no leading space.
+	if got := latestWithUnit([]api.GardenerSample{{Value: "4.39"}}, "%"); got != "4.39%" {
+		t.Errorf("percent unit = %q, want 4.39%% (no space)", got)
+	}
+	// Empty series: no unit appended.
+	if got := latestWithUnit(nil, "GiB"); got != "-" {
+		t.Errorf("empty series with unit = %q, want -", got)
+	}
+}
+
 func TestBatchFCommandsWired(t *testing.T) {
 	root := NewRootCommand("test")
 	for _, path := range [][]string{

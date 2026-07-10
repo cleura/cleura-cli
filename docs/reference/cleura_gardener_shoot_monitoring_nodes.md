@@ -7,6 +7,8 @@ Show per-node resource usage for a worker group
 Show a per-node CPU/memory/pod snapshot for a worker group. With
 --names-only, print just the node names (useful for scripts).
 
+Values are in cores (CPU), GiB (memory and filesystem) and percent (utilization).
+
 A region and project must be selected for gardener commands: pass
 --region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
 profile with 'cleura login'.

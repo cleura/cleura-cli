@@ -862,10 +862,21 @@ func newShootCAStatusCommand(opts *globalOptions) *cobra.Command {
 	return cmd
 }
 
-// fmtFloat renders a float32 metric without trailing zeros. Units are not
-// declared by the API, so no suffix is added.
+// Metric units. The API returns pre-scaled human values with no unit metadata
+// in the spec; per Cleura these are the fixed units: CPU in cores, memory and
+// filesystem in GiB, and utilization already a percentage (0–100).
+const metricsUnitsHelp = "Values are in cores (CPU), GiB (memory and filesystem) and percent (utilization)."
+
+// fmtFloat renders a float32 metric without trailing zeros. The unit is carried
+// by the column header, not the value.
 func fmtFloat(f float32) string {
 	return strconv.FormatFloat(float64(f), 'f', -1, 32)
+}
+
+// fmtPercent renders an already-percentage value (e.g. the API's *Utilization
+// fields) to one decimal with a % sign.
+func fmtPercent(f float32) string {
+	return fmt.Sprintf("%.1f%%", f)
 }
 
 // pct renders usage/allocatable as a percentage, guarding a zero denominator.
@@ -878,13 +889,26 @@ func pct(usage, allocatable float32) string {
 
 // latestSample returns the newest sample's raw value, or "-" when empty. The
 // API declares no sample ordering; we assume the last element is newest (flip
-// here if that proves wrong). Values are strings with no declared unit, so
-// they are passed through verbatim.
+// here if that proves wrong).
 func latestSample(samples []api.GardenerSample) string {
 	if len(samples) == 0 {
 		return "-"
 	}
 	return samples[len(samples)-1].Value
+}
+
+// latestWithUnit is latestSample with the unit appended (nothing appended when
+// the series is empty). Percent takes no space ("4.4%"); other units do
+// ("0.02 cores", "1.25 GiB").
+func latestWithUnit(samples []api.GardenerSample, unit string) string {
+	v := latestSample(samples)
+	if v == "-" {
+		return v
+	}
+	if unit == "%" {
+		return v + "%"
+	}
+	return v + " " + unit
 }
 
 func newShootMonitoringCommand(opts *globalOptions) *cobra.Command {
@@ -955,7 +979,7 @@ func newShootMonitoringNodesCommand(opts *globalOptions) *cobra.Command {
 		Use:   "nodes <shoot-name> <worker-group>",
 		Short: "Show per-node resource usage for a worker group",
 		Long: "Show a per-node CPU/memory/pod snapshot for a worker group. With\n" +
-			"--names-only, print just the node names (useful for scripts).\n\n" + projectScopedHelp,
+			"--names-only, print just the node names (useful for scripts).\n\n" + metricsUnitsHelp + "\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot monitoring nodes prod default\n  cleura gardener shoot monitoring nodes prod default --names-only",
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -997,7 +1021,7 @@ func newShootMonitoringNodesCommand(opts *globalOptions) *cobra.Command {
 				return apiAuthError("getting worker group nodes overview", settings, resp.HTTPResponse, resp.Body)
 			}
 			nodes := *resp.JSON200
-			header := []string{"NODE", "WORKER-GROUP", "CPU-USAGE", "CPU%", "MEM-USAGE", "MEM%", "PODS"}
+			header := []string{"NODE", "WORKER-GROUP", "CPU (cores)", "CPU%", "MEM (GiB)", "MEM%", "PODS"}
 			return output.Render(cmd.OutOrStdout(), opts.output, nodes, func(w io.Writer) error {
 				if len(nodes) == 0 {
 					opts.infof(cmd, "Worker group %q of shoot %q has no nodes", group, name)
@@ -1026,7 +1050,7 @@ func newShootMonitoringNodeCommand(opts *globalOptions) *cobra.Command {
 		Use:   "node <shoot-name> <node-name>",
 		Short: "Show detailed metrics for one node",
 		Long: "Show detailed metrics for a single node. The table shows the latest\n" +
-			"snapshot; -o json/yaml carry the full time series.\n\n" + projectScopedHelp,
+			"snapshot; -o json/yaml carry the full time series.\n\n" + metricsUnitsHelp + "\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot monitoring node prod prod-default-abc12\n  cleura gardener shoot monitoring node prod prod-default-abc12 -o json",
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -1049,16 +1073,14 @@ func newShootMonitoringNodeCommand(opts *globalOptions) *cobra.Command {
 			return output.Render(cmd.OutOrStdout(), opts.output, d, func(w io.Writer) error {
 				kv := output.NewKVWriter(w)
 				kv.Row("Node", d.NodeName)
-				// Utilization is a precomputed scalar with an undeclared unit
-				// (fraction vs percent), so it is rendered raw, not as a %.
-				kv.Row("CPU utilization", fmtFloat(d.CpuUtilization))
-				kv.Row("Memory utilization", fmtFloat(d.MemoryUtilization))
-				kv.Row("CPU used (latest)", latestSample(d.CpuUsage.Used))
-				kv.Row("CPU allocatable (latest)", latestSample(d.CpuUsage.Allocatable))
-				kv.Row("Memory used (latest)", latestSample(d.MemoryUsage.Used))
-				kv.Row("Memory allocatable (latest)", latestSample(d.MemoryUsage.Allocatable))
-				kv.Row("Filesystem size (latest)", latestSample(d.FilesystemSize.Size))
-				kv.Row("Filesystem free (latest)", latestSample(d.FilesystemSize.Free))
+				kv.Row("CPU utilization", fmtPercent(d.CpuUtilization))
+				kv.Row("Memory utilization", fmtPercent(d.MemoryUtilization))
+				kv.Row("CPU used (latest)", latestWithUnit(d.CpuUsage.Used, "cores"))
+				kv.Row("CPU allocatable (latest)", latestWithUnit(d.CpuUsage.Allocatable, "cores"))
+				kv.Row("Memory used (latest)", latestWithUnit(d.MemoryUsage.Used, "GiB"))
+				kv.Row("Memory allocatable (latest)", latestWithUnit(d.MemoryUsage.Allocatable, "GiB"))
+				kv.Row("Filesystem size (latest)", latestWithUnit(d.FilesystemSize.Size, "GiB"))
+				kv.Row("Filesystem free (latest)", latestWithUnit(d.FilesystemSize.Free, "GiB"))
 				return kv.Flush()
 			})
 		},
@@ -1073,7 +1095,7 @@ func newShootMonitoringWorkerGroupCommand(opts *globalOptions) *cobra.Command {
 		Short: "Show aggregate metrics for a worker group",
 		Long: "Show aggregate CPU/memory/node/pod metrics for a worker group. The table\n" +
 			"shows the latest sample; -o json/yaml carry the full time series.\n\n" +
-			"Manage worker groups with 'cleura gardener worker-group'.\n\n" + projectScopedHelp,
+			metricsUnitsHelp + "\n\nManage worker groups with 'cleura gardener worker-group'.\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot monitoring worker-group prod default",
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -1096,10 +1118,10 @@ func newShootMonitoringWorkerGroupCommand(opts *globalOptions) *cobra.Command {
 			return output.Render(cmd.OutOrStdout(), opts.output, d, func(w io.Writer) error {
 				kv := output.NewKVWriter(w)
 				kv.Row("Worker group", d.WorkerName)
-				kv.Row("CPU usage (latest)", latestSample(d.CpuUsage))
-				kv.Row("CPU utilization (latest)", latestSample(d.CpuUtilization))
-				kv.Row("Memory usage (latest)", latestSample(d.MemoryUsage))
-				kv.Row("Memory utilization (latest)", latestSample(d.MemoryUtilization))
+				kv.Row("CPU usage (latest)", latestWithUnit(d.CpuUsage, "cores"))
+				kv.Row("CPU utilization (latest)", latestWithUnit(d.CpuUtilization, "%"))
+				kv.Row("Memory usage (latest)", latestWithUnit(d.MemoryUsage, "GiB"))
+				kv.Row("Memory utilization (latest)", latestWithUnit(d.MemoryUtilization, "%"))
 				kv.Row("Nodes (latest)", latestSample(d.NumberOfNodes))
 				kv.Row("Pods (latest)", latestSample(d.NumberOfPods))
 				return kv.Flush()

@@ -7,6 +7,8 @@ Show aggregate metrics for a worker group
 Show aggregate CPU/memory/node/pod metrics for a worker group. The table
 shows the latest sample; -o json/yaml carry the full time series.
 
+Values are in cores (CPU), GiB (memory and filesystem) and percent (utilization).
+
 Manage worker groups with 'cleura gardener worker-group'.
 
 A region and project must be selected for gardener commands: pass
