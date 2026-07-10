@@ -153,9 +153,10 @@ func newGardenerCommand(opts *globalOptions) *cobra.Command {
 		newShootCACommand(opts),
 		newShootMonitoringCommand(opts),
 		newShootSSHKeyCommand(opts),
+		newWorkerGroupCommand(opts),
 	)
 
-	cmd.AddCommand(shoot, newWorkerGroupCommand(opts))
+	cmd.AddCommand(shoot)
 	return cmd
 }
 
@@ -536,7 +537,7 @@ func newWorkerGroupListCommand(opts *globalOptions) *cobra.Command {
 		Short: "List a shoot's worker groups",
 		Long: "List the worker groups (node pools) of a shoot: machine type, node-count\n" +
 			"range, rolling-update surge and zones.\n\n" + projectScopedHelp,
-		Example: "  cleura gardener worker-group list prod\n  cleura gardener worker-group list prod -o json",
+		Example: "  cleura gardener shoot worker-group list prod\n  cleura gardener shoot worker-group list prod -o json",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
@@ -1110,7 +1111,7 @@ func newShootMonitoringWorkerGroupCommand(opts *globalOptions) *cobra.Command {
 		Short: "Show aggregate metrics for a worker group",
 		Long: "Show aggregate CPU/memory/node/pod metrics for a worker group. The table\n" +
 			"shows the latest sample; -o json/yaml carry the full time series.\n\n" +
-			metricsUnitsHelp + "\n\nManage worker groups with 'cleura gardener worker-group'.\n\n" + projectScopedHelp,
+			metricsUnitsHelp + "\n\nManage worker groups with 'cleura gardener shoot worker-group'.\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot monitoring worker-group prod default",
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {

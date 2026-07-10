@@ -48,4 +48,5 @@ cleura gardener shoot [flags]
 * [cleura gardener shoot retry](cleura_gardener_shoot_retry.md)	 - Retry a shoot's last failed operation
 * [cleura gardener shoot ssh-key](cleura_gardener_shoot_ssh-key.md)	 - Fetch a shoot's node SSH private key
 * [cleura gardener shoot wake](cleura_gardener_shoot_wake.md)	 - Wake a shoot cluster up from hibernation
+* [cleura gardener shoot worker-group](cleura_gardener_shoot_worker-group.md)	 - Inspect a shoot's worker groups (node pools)
 

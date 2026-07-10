@@ -71,7 +71,7 @@ func TestBatchBCommandsWired(t *testing.T) {
 	for _, path := range [][]string{
 		{"gardener", "shoot", "get"},
 		{"gardener", "shoot", "check-name"},
-		{"gardener", "worker-group", "list"},
+		{"gardener", "shoot", "worker-group", "list"},
 	} {
 		c, _, err := root.Find(path)
 		if err != nil || c.Name() != path[len(path)-1] {
@@ -95,7 +95,7 @@ func TestCheckNameIsCloudScoped(t *testing.T) {
 		t.Errorf("check-name is cloud-only; help should not require region/project:\n%s", checkName.Long)
 	}
 
-	for _, path := range [][]string{{"gardener", "shoot", "get"}, {"gardener", "worker-group", "list"}} {
+	for _, path := range [][]string{{"gardener", "shoot", "get"}, {"gardener", "shoot", "worker-group", "list"}} {
 		c, _, err := root.Find(path)
 		if err != nil {
 			t.Fatalf("find %v: %v", path, err)

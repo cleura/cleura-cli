@@ -9,7 +9,7 @@ shows the latest sample; -o json/yaml carry the full time series.
 
 Values are in cores (CPU), GiB (memory and filesystem) and percent (utilization).
 
-Manage worker groups with 'cleura gardener worker-group'.
+Manage worker groups with 'cleura gardener shoot worker-group'.
 
 A region and project must be selected for gardener commands: pass
 --region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the

@@ -69,16 +69,16 @@ cleura gardener                                        manage Gardener Kubernete
 │  │  ├─ check <name> [--to <ver>]              [new]  Ready/Pending/NotReady preflight; --detailed-exitcode → GardenerCheckShootUpgradeConditions
 │  │  ├─ prepare <name> --to <ver>              [new]  green-light conditions (DESTRUCTIVE; --yes/--force) → GardenerPrepareShootUpgradeConditions
 │  │  └─ revert <name> --to <ver>              [new]  back out prepared conditions (SAFE; no gate)     → GardenerRevertShootUpgradeConditions
-│  └─ monitoring                                       observability reads (sub-noun; pure GET)
-│     ├─ credentials <name>                     [new]  Prometheus + Plutono logins (SECRET; masked)     → GardenerGetShootMonitoringCredentials
-│     ├─ nodes <name> <worker-group> [--names-only] [new] per-node snapshot; --names-only → bare names  → GardenerGetShootWorkerGroupNodesOverview / (--names-only) GardenerGetShootNodeNames
-│     ├─ node <name> <node-name>                [new]  one node's metrics (latest + series in json)     → GardenerGetShootNodeDetails
-│     └─ worker <name> <worker-group>           [new]  worker-group aggregate metrics                   → GardenerGetShootWorkerGroupDetails
-├─ worker                                              worker-pool CRUD (top-level sibling noun)
-│  ├─ list <shoot>                              [new]  pools of a shoot (synthesized from GardenerGetShoot — no API op)
-│  ├─ create <shoot> --name … --machine-type …  [new]  add a pool (flags-primary + -f)                  → GardenerCreateWorker
-│  ├─ update <shoot> <pool>                     [new]  update a pool (read-modify-write)                → GardenerUpdateWorker
-│  └─ delete <shoot> <pool>                     [new]  delete a pool (DESTRUCTIVE; refuse last pool)    → GardenerDeleteWorker
+│  ├─ monitoring                                       observability reads (sub-noun; pure GET)
+│  │  ├─ credentials <name>                     [new]  Prometheus + Plutono logins (SECRET; masked)     → GardenerGetShootMonitoringCredentials
+│  │  ├─ nodes <name> <worker-group> [--names-only] [new] per-node snapshot; --names-only → bare names  → GardenerGetShootWorkerGroupNodesOverview / (--names-only) GardenerGetShootNodeNames
+│  │  ├─ node <name> <node-name>                [new]  one node's metrics (latest + series in json)     → GardenerGetShootNodeDetails
+│  │  └─ worker-group <name> <group>            [new]  worker-group aggregate metrics                   → GardenerGetShootWorkerGroupDetails
+│  └─ worker-group                                     worker-group (node pool) CRUD — sub-noun under shoot
+│     ├─ list <shoot>                           [new]  pools of a shoot (synthesized from GardenerGetShoot — no API op)
+│     ├─ create <shoot> --name … --machine-type … [new] add a pool (flags-primary + -f)                → GardenerCreateWorker
+│     ├─ update <shoot> <pool>                  [new]  update a pool (read-modify-write)                → GardenerUpdateWorker
+│     └─ delete <shoot> <pool>                  [new]  delete a pool (DESTRUCTIVE; refuse last pool)    → GardenerDeleteWorker
 ├─ cloud-profile                                       discovery/validation source (cloud-only)
 │  ├─ list                                      [new]  machine types, k8s versions, images, regions    → GardenerListCloudProfiles
 │  └─ show <profile-name>                       [new]  one profile in detail (same endpoint, filtered)  → GardenerListCloudProfiles
@@ -88,9 +88,11 @@ cleura gardener                                        manage Gardener Kubernete
 
 Sub-noun nesting (`shoot ca|upgrade|monitoring <verb>`) is a **deliberate, newly
 ratified convention** for cohesive families; single-op day-2 verbs stay flat
-(`maintain`, `retry`, `enable-ha`). Worker-pool CRUD is a **top-level `worker`
-noun** (not `shoot worker`) to avoid `shoot` appearing as both group and
-positional; its help cross-references `shoot monitoring worker` for pool metrics.
+(`maintain`, `retry`, `enable-ha`). Worker-group (node pool) CRUD is the
+**`shoot worker-group`** sub-noun (moved under `shoot` 2026-07-10) so it sits
+with the other shoot sub-nouns; its help cross-references `shoot monitoring
+worker-group` for pool metrics. `gardener` itself is a namespace: `shoot`,
+`cloud-profile` and `project` are its sibling nouns.
 
 ## Implementation batches
 
@@ -114,14 +116,14 @@ reuse for **both** shell completion and client-side validation (k8s versions
   means wrong region/project or Gardener not offered there — surface both.
 
 ### Batch B — Reads & view-models (read before write) · effort M · ✅ SHIPPED 2026-07-10
-**Commands:** `shoot get <name>`, `shoot check-name <name>`, `worker list <shoot>`
+**Commands:** `shoot get <name>`, `shoot check-name <name>`, `shoot worker-group list <shoot>`
 Establishes the reusable machinery the write batches consume: `shootDetailView`
 (embed `GardenerShootShoot` + per-pool workers, maintenance window, hibernation
 schedules, allowed CIDRs, HA flag, conditions/endpoints, UPGRADE hint) — reused
-verbatim by create/edit's 202 render; `workerView`; and `worker list`,
+verbatim by create/edit's 202 render; `workerView`; and `shoot worker-group list`,
 **synthesized from `GardenerGetShoot`** (there is no worker list/get API), which
-supplies the `<pool-name>` that `worker update/delete` need.
-- `get`/`worker list` use full `gardenerContext`; `check-name` uses A's cloud-only
+supplies the `<pool-name>` that `shoot worker-group update/delete` need.
+- `get`/`shoot worker-group list` use full `gardenerContext`; `check-name` uses A's cloud-only
   context + suppressed flags (its SDK signature has no region/project).
 - `check-name` **defaults to exit 0** and renders `{name,is_taken,available}`;
   taken→nonzero is opt-in via `--exit-code` only (**not** `-q`, which is `--quiet`).
@@ -172,9 +174,9 @@ destructive confirmation.
 - `ca status` maps all 7 states to a computed next-action column (view-model).
 - **Grammar note:** the `ca`/`upgrade` sub-nouns are ratified *before* this batch.
 
-### Batch E — Worker pools (E1) & upgrade-conditions (E2) · effort XL
+### Batch E — Worker groups (E1) & upgrade-conditions (E2) · effort XL
 Delivered as **two verified sub-batches** to keep the micro-batch cadence.
-**E1 `worker create/update/delete`:** flags map a nested body (machine sub-object +
+**E1 `shoot worker-group create/update/delete`:** flags map a nested body (machine sub-object +
 taints/labels/annotations) + `--file`; `update` **defaults to read-modify-write**
 (fetch shoot, patch one pool, send the whole object — correct whether the server
 merges or replaces) with explicit `--clear-*` flags and a clean "no such pool"
@@ -228,7 +230,7 @@ op at once (including the shipped `wake/hibernate/reconcile`).
 | wakeUpShoot / hibernateShoot / reconcileShoot | `shoot wake/hibernate/reconcile` | done |
 | listCloudProfiles | `cloud-profile list` / `show` | A |
 | communicationBootstrap | `project bootstrap` | A |
-| getShoot | `shoot get` (+ backs `worker list`, the poller) | B |
+| getShoot | `shoot get` (+ backs `shoot worker-group list`, the poller) | B |
 | isShootNameTaken | `shoot check-name` | B |
 | createShoot | `shoot create` | C |
 | editShoot | `shoot edit` | C |
@@ -238,9 +240,9 @@ op at once (including the shipped `wake/hibernate/reconcile`).
 | enableHighlyAvailableControlPlane | `shoot enable-ha` | D |
 | rotateShootCa | `shoot ca rotate` | D |
 | getShootCaRotationStage | `shoot ca status` | D |
-| createWorker | `worker create` | E1 |
-| updateWorker | `worker update` | E1 |
-| deleteWorker | `worker delete` | E1 |
+| createWorker | `shoot worker-group create` | E1 |
+| updateWorker | `shoot worker-group update` | E1 |
+| deleteWorker | `shoot worker-group delete` | E1 |
 | checkShootUpgradeConditions | `shoot upgrade check` | E2 |
 | prepareShootUpgradeConditions | `shoot upgrade prepare` | E2 |
 | revertShootUpgradeConditions | `shoot upgrade revert` | E2 |
@@ -252,7 +254,7 @@ op at once (including the shipped `wake/hibernate/reconcile`).
 | getShootSshPrivateKey | `shoot ssh-key` | F |
 
 **29/29 mapped 1:1** (`listCloudProfiles` intentionally backs both `list` and
-`show`; `getShoot` also backs the synthesized `worker list` and the poller — read
+`show`; `getShoot` also backs the synthesized `shoot worker-group list` and the poller — read
 reuse, not double-mapping). `--wait` (Batch G) adds no new op.
 
 ## SDK / cleura-client-go work
@@ -302,7 +304,7 @@ three upgrade ops are the only Gardener ops taking a `*Params` struct (a require
 
 **Positioning — decide before Batch C:**
 - This roadmap gives the CLI **full lifecycle CRUD** (`shoot create/edit/delete`,
-  `worker create/delete`), which **overlaps the terraform provider's role** and
+  `shoot worker-group create/delete`), which **overlaps the terraform provider's role** and
   crosses the earlier "CLI owns day-2, terraform owns lifecycle" split. The user
   asked for full Gardener functionality, so the scope is intended — but confirm
   the CLI is deliberately a full lifecycle manager, and plan the README/help

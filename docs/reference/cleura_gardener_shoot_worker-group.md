@@ -1,32 +1,23 @@
-## cleura gardener worker-group list
+## cleura gardener shoot worker-group
 
-List a shoot's worker groups
+Inspect a shoot's worker groups (node pools)
 
 ### Synopsis
 
-List the worker groups (node pools) of a shoot: machine type, node-count
-range, rolling-update surge and zones.
+Inspect the worker groups (node pools) of a shoot cluster.
 
 A region and project must be selected for gardener commands: pass
 --region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
 profile with 'cleura login'.
 
 ```
-cleura gardener worker-group list <shoot-name> [flags]
-```
-
-### Examples
-
-```
-  cleura gardener worker-group list prod
-  cleura gardener worker-group list prod -o json
+cleura gardener shoot worker-group [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help            help for list
-  -o, --output string   Output format: table, json, yaml (default "table")
+  -h, --help   help for worker-group
 ```
 
 ### Options inherited from parent commands
@@ -43,5 +34,6 @@ cleura gardener worker-group list <shoot-name> [flags]
 
 ### SEE ALSO
 
-* [cleura gardener worker-group](cleura_gardener_worker-group.md)	 - Inspect a shoot's worker groups (node pools)
+* [cleura gardener shoot](cleura_gardener_shoot.md)	 - Manage shoot clusters
+* [cleura gardener shoot worker-group list](cleura_gardener_shoot_worker-group_list.md)	 - List a shoot's worker groups
 
