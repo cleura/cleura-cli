@@ -139,13 +139,24 @@ func newCloudProfileShowCommand(opts *globalOptions) *cobra.Command {
 						kv.Row("  "+mt.Name, machineTypeLabel(mt))
 					}
 				}
-				if len(profile.MachineImages) > 0 {
+				// Fold the image name into the header for the common single-image
+				// case; nest per-image only when a profile offers several.
+				writeImageGroups := func(indent string, img api.GardenerCloudProfileMachineImage) {
+					for _, g := range groupVersions(classifyImages(img.Versions)) {
+						kv.Row(indent+g.label, strings.Join(g.versions, ", "))
+					}
+				}
+				switch len(profile.MachineImages) {
+				case 0:
+				case 1:
+					img := profile.MachineImages[0]
+					kv.Row("Machine images ("+img.Name+")", "")
+					writeImageGroups("  ", img)
+				default:
 					kv.Row("Machine images", "")
 					for _, img := range profile.MachineImages {
 						kv.Row("  "+img.Name, "")
-						for _, g := range groupVersions(classifyImages(img.Versions)) {
-							kv.Row("    "+g.label, strings.Join(g.versions, ", "))
-						}
+						writeImageGroups("    ", img)
 					}
 				}
 				if regions := regionList(profile.Regions); regions != "" {
