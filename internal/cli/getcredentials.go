@@ -32,7 +32,7 @@ func (e *ExitCodeError) Unwrap() error { return e.Err }
 type credentialsEnvelope struct {
 	Version       int    `json:"version"`
 	Profile       string `json:"profile"`
-	Cloud         string `json:"cloud"`
+	Cloud         string `json:"cloud,omitempty"`
 	Endpoint      string `json:"endpoint"`
 	Username      string `json:"username"`
 	Token         string `json:"token"`

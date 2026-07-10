@@ -5,8 +5,25 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cleura/cleura-cli/internal/config"
 	api "github.com/cleura/cleura-client-go/api"
 )
+
+// TestRequireCloud locks the gardener cloud guard: an empty cloud (an
+// incomplete private-cloud profile with api_url but no cloud name) must be
+// reported, not sent as an empty API path segment.
+func TestRequireCloud(t *testing.T) {
+	if err := requireCloud(config.Settings{Cloud: "public"}); err != nil {
+		t.Errorf("a set cloud should pass: %v", err)
+	}
+	if err := requireCloud(config.Settings{Cloud: "companyname01"}); err != nil {
+		t.Errorf("a custom cloud should pass: %v", err)
+	}
+	err := requireCloud(config.Settings{Cloud: ""})
+	if err == nil || !strings.Contains(err.Error(), "no cloud selected") {
+		t.Errorf("empty cloud should error 'no cloud selected', got %v", err)
+	}
+}
 
 // TestShootHA covers the derived high-availability string: there is no literal
 // HA bool in the API, so it is derived from the optional ControlPlane block.

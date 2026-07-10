@@ -177,11 +177,12 @@ func TestResolveEndpoint(t *testing.T) {
 		"private": {Cloud: "acme", APIURL: private},
 	}}
 
-	// Stored api_url is used when nothing overrides it; the logical cloud
-	// falls back to the default.
+	// A stored api_url with no cloud is an incomplete private-cloud config: the
+	// endpoint uses the api_url, but the cloud name is left EMPTY rather than
+	// invented as "public" (gardener then reports the missing cloud).
 	s := cfg.Resolve(Flags{Profile: "acme"})
-	if s.APIURL != private || s.Cloud != "public" {
-		t.Errorf("profile api_url not used: %+v", s)
+	if s.APIURL != private || s.Cloud != "" {
+		t.Errorf("api_url-only profile should use the url and leave cloud empty: %+v", s)
 	}
 
 	// A private cloud stores both: the URL for the endpoint, the cloud name
@@ -282,8 +283,8 @@ func TestResolveSources(t *testing.T) {
 	}
 
 	s = cfg.Resolve(Flags{Profile: "acme"})
-	if s.Sources.APIURL != "profile" || s.Sources.Cloud != "default" {
-		t.Errorf("acme sources = %+v", s.Sources)
+	if s.Sources.APIURL != "profile" || s.Sources.Cloud != "" {
+		t.Errorf("acme sources = %+v (cloud should be unset, not defaulted)", s.Sources)
 	}
 	if s.Sources.Endpoint != "profile" {
 		t.Errorf("endpoint source should be the api_url's source, got %q", s.Sources.Endpoint)

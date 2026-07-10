@@ -266,12 +266,22 @@ func (c *Config) Resolve(flags Flags) Settings {
 // cloud stores {cloud: acme, api_url: ...} and selecting --cloud acme must
 // keep using its URL. APIURL is set only when an explicit URL is in effect.
 func (s *Settings) resolveEndpoint(flags Flags, profile *Profile) {
-	s.Cloud, s.Sources.Cloud = pick(
-		candidate{flags.Cloud, "--cloud"},
-		candidate{os.Getenv("CLEURA_CLOUD"), "$CLEURA_CLOUD"},
-		candidate{profile.Cloud, "profile"},
-		candidate{"public", "default"},
-	)
+	cloudCandidates := []candidate{
+		{flags.Cloud, "--cloud"},
+		{os.Getenv("CLEURA_CLOUD"), "$CLEURA_CLOUD"},
+		{profile.Cloud, "profile"},
+	}
+	// The built-in "public" default applies only when no explicit endpoint is
+	// in play. A private cloud is configured as {cloud: <name>, api_url: <url>}
+	// with BOTH set, so an api_url with no cloud is an incomplete private-cloud
+	// config — not the public cloud. Leaving the cloud name empty there (rather
+	// than inventing "public") stops the CLI sending gardener to
+	// /gardener/v2/public/... against a private endpoint; gardener reports the
+	// missing cloud instead (see requireCloud).
+	if flags.APIURL == "" && os.Getenv("CLEURA_API_URL") == "" && profile.APIURL == "" {
+		cloudCandidates = append(cloudCandidates, candidate{"public", "default"})
+	}
+	s.Cloud, s.Sources.Cloud = pick(cloudCandidates...)
 	s.Sources.Endpoint = s.Sources.Cloud
 
 	// looseMatch marks the live sources (flags, env): their unpaired URL may

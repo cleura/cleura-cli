@@ -173,6 +173,9 @@ func gardenerContext(opts *globalOptions) (config.Settings, *cleura.Client, erro
 	if err != nil {
 		return settings, nil, err
 	}
+	if err := requireCloud(settings); err != nil {
+		return settings, nil, err
+	}
 	if err := requireProjectContext(settings); err != nil {
 		return settings, nil, err
 	}
@@ -193,6 +196,9 @@ func gardenerCloudContext(opts *globalOptions) (config.Settings, *cleura.Client,
 	}
 	client, err := opts.authenticatedClient(settings)
 	if err != nil {
+		return settings, nil, err
+	}
+	if err := requireCloud(settings); err != nil {
 		return settings, nil, err
 	}
 	return settings, client, nil
@@ -1292,6 +1298,17 @@ func writeSecretFile(path string, data []byte) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), path)
+}
+
+// requireCloud validates that a cloud name is selected. Gardener uses it as an
+// API path segment, so an empty cloud — an incomplete private-cloud profile
+// that set an api_url but no cloud name — must be reported, not sent as an
+// empty path segment.
+func requireCloud(s config.Settings) error {
+	if s.Cloud == "" {
+		return fmt.Errorf("no cloud selected; use --cloud or CLEURA_CLOUD (public, compliant, or your private cloud's name), or log in with --cloud to store it in the profile")
+	}
+	return nil
 }
 
 // requireProjectContext validates the settings needed by project-scoped commands.
