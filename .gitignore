@@ -5,3 +5,6 @@ __debug*
 go.work
 go.work.sum
 .agent
+
+# Local working doc of API gaps / client workarounds — intentionally uncommitted
+/client-api-wishlist.md
