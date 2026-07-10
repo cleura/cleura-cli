@@ -18,9 +18,10 @@ func newConfigCommand(opts *globalOptions) *cobra.Command {
 		Short: "Manage CLI configuration and profiles",
 		Long: `Manage the cleura CLI's configuration and named profiles: view the effective
 settings and where each comes from, find the config file, and add or switch
-profiles. The config file is internal to the CLI, not an API — scripts should
-use 'cleura config get-credentials' or 'cleura config view -o json' instead of
-reading it.`,
+profiles. The config file is internal to the CLI, not an API — scripts that
+need resolved credentials should call 'cleura config get-credentials' (the
+stable JSON contract), not read the file. 'config view' is a human diagnostic;
+its shape may change between releases.`,
 		// Fail loudly on typo'd subcommands instead of exit-0 help output.
 		Args: cobra.NoArgs,
 		RunE: groupHelp,
@@ -74,7 +75,10 @@ func newConfigViewCommand(opts *globalOptions) *cobra.Command {
 		Long: `Show the settings the next command would use, resolved with the usual
 precedence (flags > environment > profile > defaults), and the source of each
 value. Values set by environment variables that shadow something stored in the
-selected profile are pointed out on stderr. The token value is never shown.`,
+selected profile are pointed out on stderr. The token value is never shown.
+
+This is a human diagnostic; for a stable machine-readable contract use
+'cleura config get-credentials'.`,
 		Example: "  cleura config view\n  cleura config view --profile compliant -o json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

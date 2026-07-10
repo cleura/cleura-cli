@@ -9,6 +9,9 @@ precedence (flags > environment > profile > defaults), and the source of each
 value. Values set by environment variables that shadow something stored in the
 selected profile are pointed out on stderr. The token value is never shown.
 
+This is a human diagnostic; for a stable machine-readable contract use
+'cleura config get-credentials'.
+
 ```
 cleura config view [flags]
 ```

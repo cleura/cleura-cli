@@ -119,7 +119,8 @@ profiles:
 > **The config file format is internal, not an API.** It is shown here so you
 > know what is stored where; its schema may change between releases. Programs
 > and scripts must not parse it — use `cleura config get-credentials` (see
-> [Tool integration](#tool-integration)) or `cleura config view -o json`.
+> [Tool integration](#tool-integration)), the stable JSON contract. (`cleura
+> config view` is a human diagnostic; its output shape is not a contract.)
 
 Environment variables (shared with the
 [Terraform provider](https://github.com/cleura/terraform-provider-cleura)):
