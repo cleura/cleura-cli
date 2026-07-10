@@ -14,7 +14,15 @@ type ExitCodeError struct {
 	Err  error
 }
 
-func (e *ExitCodeError) Error() string { return e.Err.Error() }
+// Error returns the wrapped message, or "" when there is none: an ExitCodeError
+// may carry only an exit code (e.g. a scripting predicate like
+// 'shoot check-name --exit-code'), and main prints no "Error:" line for it.
+func (e *ExitCodeError) Error() string {
+	if e.Err == nil {
+		return ""
+	}
+	return e.Err.Error()
+}
 func (e *ExitCodeError) Unwrap() error { return e.Err }
 
 // credentialsEnvelope is the stable tool-integration contract emitted by

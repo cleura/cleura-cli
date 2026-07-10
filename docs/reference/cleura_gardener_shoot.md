@@ -35,9 +35,17 @@ cleura gardener shoot [flags]
 ### SEE ALSO
 
 * [cleura gardener](cleura_gardener.md)	 - Manage Gardener Kubernetes clusters
+* [cleura gardener shoot ca](cleura_gardener_shoot_ca.md)	 - Manage a shoot's certificate-authority rotation
+* [cleura gardener shoot check-name](cleura_gardener_shoot_check-name.md)	 - Check whether a shoot name is available in the cloud
+* [cleura gardener shoot enable-ha](cleura_gardener_shoot_enable-ha.md)	 - Enable a highly available (multi-zone) control plane
+* [cleura gardener shoot get](cleura_gardener_shoot_get.md)	 - Show detailed information about a shoot cluster
 * [cleura gardener shoot hibernate](cleura_gardener_shoot_hibernate.md)	 - Hibernate a shoot cluster (scales workloads and control plane down)
 * [cleura gardener shoot kubeconfig](cleura_gardener_shoot_kubeconfig.md)	 - Create a time-limited admin kubeconfig for a shoot cluster
 * [cleura gardener shoot list](cleura_gardener_shoot_list.md)	 - List shoot clusters in a project
+* [cleura gardener shoot maintain](cleura_gardener_shoot_maintain.md)	 - Run the shoot's maintenance operation now
+* [cleura gardener shoot monitoring](cleura_gardener_shoot_monitoring.md)	 - Inspect a shoot's monitoring data and credentials
 * [cleura gardener shoot reconcile](cleura_gardener_shoot_reconcile.md)	 - Trigger a reconciliation of a shoot cluster
+* [cleura gardener shoot retry](cleura_gardener_shoot_retry.md)	 - Retry the shoot's last failed operation
+* [cleura gardener shoot ssh-key](cleura_gardener_shoot_ssh-key.md)	 - Fetch the shoot's node SSH private key
 * [cleura gardener shoot wake](cleura_gardener_shoot_wake.md)	 - Wake a shoot cluster up from hibernation
 

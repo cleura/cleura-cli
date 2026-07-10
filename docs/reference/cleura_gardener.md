@@ -36,4 +36,5 @@ cleura gardener [flags]
 
 * [cleura](cleura.md)	 - Command-line interface for Cleura Cloud
 * [cleura gardener shoot](cleura_gardener_shoot.md)	 - Manage shoot clusters
+* [cleura gardener worker-group](cleura_gardener_worker-group.md)	 - Inspect a shoot's worker groups (node pools)
 

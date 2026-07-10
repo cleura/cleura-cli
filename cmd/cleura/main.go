@@ -42,7 +42,11 @@ func main() {
 		if errors.As(err, &coded) {
 			exitCode = coded.Code
 		}
-		fmt.Fprintln(os.Stderr, "Error:", err)
+		// A coded error may carry only an exit status (e.g. a scripting
+		// predicate); print the "Error:" line only when there is a message.
+		if msg := err.Error(); msg != "" {
+			fmt.Fprintln(os.Stderr, "Error:", msg)
+		}
 		os.Exit(exitCode)
 	}
 }
