@@ -862,29 +862,42 @@ func newShootCAStatusCommand(opts *globalOptions) *cobra.Command {
 	return cmd
 }
 
-// Metric units. The API returns pre-scaled human values with no unit metadata
-// in the spec; per Cleura these are the fixed units: CPU in cores, memory and
-// filesystem in GiB, and utilization already a percentage (0–100).
+// Metric units differ by endpoint (none are declared in the spec; these are
+// Cleura's fixed conventions):
+//   - the details endpoints (node, worker-group) report memory and filesystem
+//     in GiB and utilization as a percentage;
+//   - the nodes-overview endpoint reports memory in BYTES (converted to GiB for
+//     the table by bytesToGiB).
+//
+// CPU is in cores everywhere.
 const metricsUnitsHelp = "Values are in cores (CPU), GiB (memory and filesystem) and percent (utilization)."
 
-// fmtFloat renders a float32 metric without trailing zeros. The unit is carried
-// by the column header, not the value.
+// overviewUnitsHelp documents the nodes-overview table, which shows plain
+// usage/idle values; memory arrives in bytes and is shown as GiB, while -o json
+// keeps the raw API values.
+const overviewUnitsHelp = "The table shows cores (CPU) and GiB (memory); -o json reports the raw API values (cores and bytes)."
+
+// fmtFloat renders a float32 metric without trailing zeros (used for counts
+// like pods). The unit, if any, is carried by the column header.
 func fmtFloat(f float32) string {
 	return strconv.FormatFloat(float64(f), 'f', -1, 32)
 }
 
-// fmtPercent renders an already-percentage value (e.g. the API's *Utilization
-// fields) to one decimal with a % sign.
-func fmtPercent(f float32) string {
-	return fmt.Sprintf("%.1f%%", f)
+// fmtCores renders a CPU-cores value to three decimals.
+func fmtCores(f float32) string {
+	return fmt.Sprintf("%.3f", f)
 }
 
-// pct renders usage/allocatable as a percentage, guarding a zero denominator.
-func pct(usage, allocatable float32) string {
-	if allocatable == 0 {
-		return "-"
-	}
-	return fmt.Sprintf("%.1f%%", usage/allocatable*100)
+// bytesToGiB renders a byte count as GiB to two decimals. The nodes-overview
+// endpoint reports memory in bytes; the details endpoints already use GiB.
+func bytesToGiB(b float32) string {
+	return fmt.Sprintf("%.2f", float64(b)/(1<<30))
+}
+
+// fmtPercent renders an already-percentage value (e.g. the details endpoints'
+// *Utilization fields) to one decimal with a % sign.
+func fmtPercent(f float32) string {
+	return fmt.Sprintf("%.1f%%", f)
 }
 
 // latestSample returns the newest sample's raw value, or "-" when empty. The
@@ -978,8 +991,9 @@ func newShootMonitoringNodesCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "nodes <shoot-name> <worker-group>",
 		Short: "Show per-node resource usage for a worker group",
-		Long: "Show a per-node CPU/memory/pod snapshot for a worker group. With\n" +
-			"--names-only, print just the node names (useful for scripts).\n\n" + metricsUnitsHelp + "\n\n" + projectScopedHelp,
+		Long: "Show a per-node snapshot of CPU (used/idle), memory (used/free) and pod\n" +
+			"count for a worker group. With --names-only, print just the node names\n" +
+			"(useful for scripts).\n\n" + overviewUnitsHelp + "\n\n" + projectScopedHelp,
 		Example: "  cleura gardener shoot monitoring nodes prod default\n  cleura gardener shoot monitoring nodes prod default --names-only",
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -1021,7 +1035,7 @@ func newShootMonitoringNodesCommand(opts *globalOptions) *cobra.Command {
 				return apiAuthError("getting worker group nodes overview", settings, resp.HTTPResponse, resp.Body)
 			}
 			nodes := *resp.JSON200
-			header := []string{"NODE", "WORKER-GROUP", "CPU (cores)", "CPU%", "MEM (GiB)", "MEM%", "PODS"}
+			header := []string{"NODE", "WORKER-GROUP", "CPU-USED (cores)", "CPU-IDLE (cores)", "MEM-USED (GiB)", "MEM-FREE (GiB)", "PODS"}
 			return output.Render(cmd.OutOrStdout(), opts.output, nodes, func(w io.Writer) error {
 				if len(nodes) == 0 {
 					opts.infof(cmd, "Worker group %q of shoot %q has no nodes", group, name)
@@ -1029,10 +1043,11 @@ func newShootMonitoringNodesCommand(opts *globalOptions) *cobra.Command {
 				}
 				rows := make([][]string, 0, len(nodes))
 				for _, n := range nodes {
+					// Memory arrives in bytes on this endpoint; CPU in cores.
 					rows = append(rows, []string{
 						n.NodeName, n.WorkerGroup,
-						fmtFloat(n.CpuUsage), pct(n.CpuUsage, n.AllocatableCpu),
-						fmtFloat(n.MemoryUsage), pct(n.MemoryUsage, n.AllocatableMemory),
+						fmtCores(n.CpuUsage), fmtCores(n.IdleCpu),
+						bytesToGiB(n.MemoryUsage), bytesToGiB(n.UnusedMemory),
 						fmtFloat(n.Pods),
 					})
 				}

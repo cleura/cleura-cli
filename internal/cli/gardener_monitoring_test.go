@@ -17,12 +17,22 @@ func TestFmtFloat(t *testing.T) {
 	}
 }
 
-func TestPct(t *testing.T) {
-	if got := pct(1, 4); got != "25.0%" {
-		t.Errorf("pct(1,4) = %q, want 25.0%%", got)
+func TestFmtCores(t *testing.T) {
+	if got := fmtCores(0.08366667); got != "0.084" {
+		t.Errorf("fmtCores(0.08366667) = %q, want 0.084", got)
 	}
-	if got := pct(3, 0); got != "-" {
-		t.Errorf("pct with zero allocatable = %q, want - (no divide-by-zero)", got)
+	if got := fmtCores(1.8463334); got != "1.846" {
+		t.Errorf("fmtCores(1.8463334) = %q, want 1.846", got)
+	}
+}
+
+func TestBytesToGiB(t *testing.T) {
+	// 998195200 bytes ≈ 0.93 GiB (the overview endpoint reports bytes).
+	if got := bytesToGiB(998195200); got != "0.93" {
+		t.Errorf("bytesToGiB(998195200) = %q, want 0.93", got)
+	}
+	if got := bytesToGiB(0); got != "0.00" {
+		t.Errorf("bytesToGiB(0) = %q, want 0.00", got)
 	}
 }
 
