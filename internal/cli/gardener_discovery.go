@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cleura/cleura-cli/internal/output"
 	api "github.com/cleura/cleura-client-go/api"
@@ -195,11 +196,13 @@ func usableMachineTypeCount(types []api.GardenerCloudProfileMachineType) int {
 	return n
 }
 
-// versionInfo is a version string with its non-supported classification (empty
-// when supported); used to group cloud-profile version lists for display.
+// versionInfo is a version with its non-supported classification (empty when
+// supported) and optional expiration; used to group cloud-profile version
+// lists for display.
 type versionInfo struct {
 	version string
 	class   string
+	expiry  *time.Time
 }
 
 type versionGroup struct {
@@ -210,7 +213,7 @@ type versionGroup struct {
 func classifyK8s(versions []api.GardenerCloudProfileKubernetesVersion) []versionInfo {
 	out := make([]versionInfo, 0, len(versions))
 	for _, v := range versions {
-		out = append(out, versionInfo{v.Version, nonSupportedClass(v.Classification)})
+		out = append(out, versionInfo{v.Version, nonSupportedClass(v.Classification), v.ExpirationDate})
 	}
 	return out
 }
@@ -218,7 +221,7 @@ func classifyK8s(versions []api.GardenerCloudProfileKubernetesVersion) []version
 func classifyImages(versions []api.GardenerCloudProfileMachineImageVersion) []versionInfo {
 	out := make([]versionInfo, 0, len(versions))
 	for _, v := range versions {
-		out = append(out, versionInfo{v.Version, nonSupportedClass(v.Classification)})
+		out = append(out, versionInfo{v.Version, nonSupportedClass(v.Classification), v.ExpirationDate})
 	}
 	return out
 }
@@ -232,30 +235,62 @@ func nonSupportedClass(c *api.K8sVersionClassification) string {
 	return string(*c)
 }
 
-// groupVersions buckets versions by classification: the supported ones first
-// (label "supported"), then each other classification sorted alphabetically.
-// Version order within a group is preserved (the API lists them ascending).
+// groupVersions buckets versions by (classification, expiration date) so
+// versions sharing a status and deadline share one line. Groups are ordered
+// supported-first, then by soonest expiry (undated last); the label is the
+// classification, plus " (expires <date>)" when the group expires. Version
+// order within a group is preserved (the API lists them ascending).
 func groupVersions(versions []versionInfo) []versionGroup {
-	supported := []string{}
-	others := map[string][]string{}
-	labels := []string{}
+	type bucket struct {
+		class    string // "" == supported
+		date     string // "" or YYYY-MM-DD
+		versions []string
+	}
+	order := []string{}
+	buckets := map[string]*bucket{}
 	for _, v := range versions {
-		if v.class == "" {
-			supported = append(supported, v.version)
-			continue
+		date := ""
+		if v.expiry != nil {
+			date = v.expiry.Format("2006-01-02")
 		}
-		if _, seen := others[v.class]; !seen {
-			labels = append(labels, v.class)
+		key := v.class + "|" + date
+		b := buckets[key]
+		if b == nil {
+			b = &bucket{class: v.class, date: date}
+			buckets[key] = b
+			order = append(order, key)
 		}
-		others[v.class] = append(others[v.class], v.version)
+		b.versions = append(b.versions, v.version)
 	}
-	sort.Strings(labels)
-	groups := make([]versionGroup, 0, len(labels)+1)
-	if len(supported) > 0 {
-		groups = append(groups, versionGroup{"supported", supported})
+
+	bs := make([]*bucket, 0, len(order))
+	for _, key := range order {
+		bs = append(bs, buckets[key])
 	}
-	for _, l := range labels {
-		groups = append(groups, versionGroup{l, others[l]})
+	sort.SliceStable(bs, func(i, j int) bool {
+		a, b := bs[i], bs[j]
+		if aSup, bSup := a.class == "", b.class == ""; aSup != bSup {
+			return aSup // supported groups first
+		}
+		if (a.date == "") != (b.date == "") {
+			return a.date != "" // dated (more urgent) before undated
+		}
+		if a.date != b.date {
+			return a.date < b.date // soonest expiry first (YYYY-MM-DD sorts chronologically)
+		}
+		return a.class < b.class
+	})
+
+	groups := make([]versionGroup, 0, len(bs))
+	for _, b := range bs {
+		label := b.class
+		if label == "" {
+			label = "supported"
+		}
+		if b.date != "" {
+			label += " (expires " + b.date + ")"
+		}
+		groups = append(groups, versionGroup{label, b.versions})
 	}
 	return groups
 }

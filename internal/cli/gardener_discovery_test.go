@@ -4,6 +4,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	api "github.com/cleura/cleura-client-go/api"
 )
@@ -47,6 +48,35 @@ func TestGroupVersions(t *testing.T) {
 	// The list command's usable count still sees nil + Supported (2 of 4).
 	if n := len(supportedK8sVersions(versions)); n != 2 {
 		t.Errorf("supportedK8sVersions count = %d, want 2", n)
+	}
+}
+
+func TestGroupVersionsWithExpiry(t *testing.T) {
+	sup := api.Supported
+	dep := api.K8sVersionClassification("deprecated")
+	mar := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	may := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	versions := []api.GardenerCloudProfileKubernetesVersion{
+		{Version: "1.35.6", Classification: &sup},                       // supported, no expiry
+		{Version: "1.34.8", Classification: &dep, ExpirationDate: &may}, // later
+		{Version: "1.33.9", Classification: &dep, ExpirationDate: &mar}, // sooner
+		{Version: "1.33.10", Classification: &dep, ExpirationDate: &mar},
+	}
+	groups := groupVersions(classifyK8s(versions))
+	if len(groups) != 3 {
+		t.Fatalf("groups = %d, want 3", len(groups))
+	}
+	// supported first, no expiry suffix.
+	if groups[0].label != "supported" || strings.Join(groups[0].versions, ",") != "1.35.6" {
+		t.Errorf("group 0 = %+v, want supported [1.35.6]", groups[0])
+	}
+	// Soonest expiry next, versions sharing the date merged.
+	if groups[1].label != "deprecated (expires 2026-03-01)" || strings.Join(groups[1].versions, ",") != "1.33.9,1.33.10" {
+		t.Errorf("group 1 = %+v, want deprecated 2026-03-01 [1.33.9 1.33.10]", groups[1])
+	}
+	// Later expiry after.
+	if groups[2].label != "deprecated (expires 2026-05-01)" || strings.Join(groups[2].versions, ",") != "1.34.8" {
+		t.Errorf("group 2 = %+v, want deprecated 2026-05-01 [1.34.8]", groups[2])
 	}
 }
 
