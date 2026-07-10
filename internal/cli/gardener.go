@@ -457,8 +457,9 @@ func newShootCheckNameCommand(opts *globalOptions) *cobra.Command {
 		Short: "Check whether a shoot name is available in the cloud",
 		Long: "Check whether a shoot name is already taken in the selected cloud.\n\n" +
 			"This is a cloud-wide check: it needs a cloud (--cloud/profile) but no\n" +
-			"region or project. With --exit-code the command exits 1 when the name is\n" +
-			"taken, so it can be used as a script predicate.",
+			"region or project.\n\nWith --exit-code the command is a script predicate: it exits 0 if the name\n" +
+			"is available, 2 if it is taken, and 1 (or another non-zero) if the check\n" +
+			"itself failed — so 'taken' is never confused with an error.",
 		Example: "  cleura gardener shoot check-name prod\n" +
 			"  cleura gardener shoot check-name prod --exit-code && echo name is free",
 		Args: cobra.ExactArgs(1),
@@ -491,16 +492,19 @@ func newShootCheckNameCommand(opts *globalOptions) *cobra.Command {
 			}); err != nil {
 				return err
 			}
-			// Opt-in scripting predicate: taken -> exit 1, with no error text
-			// (a taken name is a valid answer, not a failure).
+			// Opt-in scripting predicate: taken -> exit 2, with no error text (a
+			// taken name is a valid answer, not a failure). Exit 2 (not 1) keeps
+			// it distinct from the generic error code, matching get-credentials'
+			// 2 = expected-negative / 1 = malfunction convention, so a create-if-
+			// free guard never mistakes an expired token or 5xx for "taken".
 			if exitCode && view.IsTaken {
-				return &ExitCodeError{Code: 1}
+				return &ExitCodeError{Code: 2}
 			}
 			return nil
 		},
 	}
 	addOutputFlag(cmd, opts)
-	cmd.Flags().BoolVar(&exitCode, "exit-code", false, "Exit 1 if the name is taken (for scripting)")
+	cmd.Flags().BoolVar(&exitCode, "exit-code", false, "For scripting: exit 0 if available, 2 if taken, 1 if the check failed")
 	return cmd
 }
 

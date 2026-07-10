@@ -7,8 +7,11 @@ Check whether a shoot name is available in the cloud
 Check whether a shoot name is already taken in the selected cloud.
 
 This is a cloud-wide check: it needs a cloud (--cloud/profile) but no
-region or project. With --exit-code the command exits 1 when the name is
-taken, so it can be used as a script predicate.
+region or project.
+
+With --exit-code the command is a script predicate: it exits 0 if the name
+is available, 2 if it is taken, and 1 (or another non-zero) if the check
+itself failed — so 'taken' is never confused with an error.
 
 ```
 cleura gardener shoot check-name <shoot-name> [flags]
@@ -24,7 +27,7 @@ cleura gardener shoot check-name <shoot-name> [flags]
 ### Options
 
 ```
-      --exit-code       Exit 1 if the name is taken (for scripting)
+      --exit-code       For scripting: exit 0 if available, 2 if taken, 1 if the check failed
   -h, --help            help for check-name
   -o, --output string   Output format: table, json, yaml (default "table")
 ```
