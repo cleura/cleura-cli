@@ -24,18 +24,27 @@ func TestBatchACommandsWired(t *testing.T) {
 	}
 }
 
-func TestK8sVersionList(t *testing.T) {
+func TestGroupVersions(t *testing.T) {
 	sup := api.Supported
 	dep := api.K8sVersionClassification("deprecated")
 	versions := []api.GardenerCloudProfileKubernetesVersion{
 		{Version: "1.30.1", Classification: &sup},
 		{Version: "1.29.5", Classification: &dep},
-		{Version: "1.31.0"}, // nil classification counts as supported, rendered bare
+		{Version: "1.31.0"}, // nil classification → supported
+		{Version: "1.29.8", Classification: &dep},
 	}
-	if got, want := k8sVersionList(versions), "1.30.1, 1.29.5 (deprecated), 1.31.0"; got != want {
-		t.Errorf("k8sVersionList = %q, want %q", got, want)
+	groups := groupVersions(classifyK8s(versions))
+	if len(groups) != 2 {
+		t.Fatalf("groups = %d, want 2 (supported, deprecated)", len(groups))
 	}
-	// Supported set = nil classification + explicit Supported (2 of 3).
+	// Supported group first, preserving API order; nil + explicit Supported.
+	if groups[0].label != "supported" || strings.Join(groups[0].versions, ",") != "1.30.1,1.31.0" {
+		t.Errorf("supported group = %+v, want [1.30.1 1.31.0]", groups[0])
+	}
+	if groups[1].label != "deprecated" || strings.Join(groups[1].versions, ",") != "1.29.5,1.29.8" {
+		t.Errorf("deprecated group = %+v, want [1.29.5 1.29.8]", groups[1])
+	}
+	// The list command's usable count still sees nil + Supported (2 of 4).
 	if n := len(supportedK8sVersions(versions)); n != 2 {
 		t.Errorf("supportedK8sVersions count = %d, want 2", n)
 	}

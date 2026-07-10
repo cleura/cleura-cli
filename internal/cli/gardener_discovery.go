@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -126,15 +127,26 @@ func newCloudProfileShowCommand(opts *globalOptions) *cobra.Command {
 				kv := output.NewKVWriter(w)
 				kv.Row("Name", profile.Name)
 				kv.Row("Type", profile.Type)
-				kv.Row("Kubernetes versions", k8sVersionList(profile.Kubernetes.Versions))
+				if groups := groupVersions(classifyK8s(profile.Kubernetes.Versions)); len(groups) > 0 {
+					kv.Row("Kubernetes versions", "")
+					for _, g := range groups {
+						kv.Row("  "+g.label, strings.Join(g.versions, ", "))
+					}
+				}
 				if len(profile.MachineTypes) > 0 {
 					kv.Row("Machine types", "")
 					for _, mt := range profile.MachineTypes {
 						kv.Row("  "+mt.Name, machineTypeLabel(mt))
 					}
 				}
-				if images := machineImageList(profile.MachineImages); images != "" {
-					kv.Row("Machine images", images)
+				if len(profile.MachineImages) > 0 {
+					kv.Row("Machine images", "")
+					for _, img := range profile.MachineImages {
+						kv.Row("  "+img.Name, "")
+						for _, g := range groupVersions(classifyImages(img.Versions)) {
+							kv.Row("    "+g.label, strings.Join(g.versions, ", "))
+						}
+					}
 				}
 				if regions := regionList(profile.Regions); regions != "" {
 					kv.Row("Regions", regions)
@@ -172,18 +184,69 @@ func usableMachineTypeCount(types []api.GardenerCloudProfileMachineType) int {
 	return n
 }
 
-// k8sVersionList lists every version, flagging any that is not "supported"
-// (e.g. preview or deprecated) so it is clear which are safe create targets.
-func k8sVersionList(versions []api.GardenerCloudProfileKubernetesVersion) string {
-	out := make([]string, 0, len(versions))
+// versionInfo is a version string with its non-supported classification (empty
+// when supported); used to group cloud-profile version lists for display.
+type versionInfo struct {
+	version string
+	class   string
+}
+
+type versionGroup struct {
+	label    string
+	versions []string
+}
+
+func classifyK8s(versions []api.GardenerCloudProfileKubernetesVersion) []versionInfo {
+	out := make([]versionInfo, 0, len(versions))
 	for _, v := range versions {
-		s := v.Version
-		if v.Classification != nil && *v.Classification != api.Supported {
-			s += " (" + string(*v.Classification) + ")"
-		}
-		out = append(out, s)
+		out = append(out, versionInfo{v.Version, nonSupportedClass(v.Classification)})
 	}
-	return strings.Join(out, ", ")
+	return out
+}
+
+func classifyImages(versions []api.GardenerCloudProfileMachineImageVersion) []versionInfo {
+	out := make([]versionInfo, 0, len(versions))
+	for _, v := range versions {
+		out = append(out, versionInfo{v.Version, nonSupportedClass(v.Classification)})
+	}
+	return out
+}
+
+// nonSupportedClass returns "" for a nil or "supported" classification, else
+// the classification string (e.g. "preview", "deprecated").
+func nonSupportedClass(c *api.K8sVersionClassification) string {
+	if c == nil || *c == api.Supported {
+		return ""
+	}
+	return string(*c)
+}
+
+// groupVersions buckets versions by classification: the supported ones first
+// (label "supported"), then each other classification sorted alphabetically.
+// Version order within a group is preserved (the API lists them ascending).
+func groupVersions(versions []versionInfo) []versionGroup {
+	supported := []string{}
+	others := map[string][]string{}
+	labels := []string{}
+	for _, v := range versions {
+		if v.class == "" {
+			supported = append(supported, v.version)
+			continue
+		}
+		if _, seen := others[v.class]; !seen {
+			labels = append(labels, v.class)
+		}
+		others[v.class] = append(others[v.class], v.version)
+	}
+	sort.Strings(labels)
+	groups := make([]versionGroup, 0, len(labels)+1)
+	if len(supported) > 0 {
+		groups = append(groups, versionGroup{"supported", supported})
+	}
+	for _, l := range labels {
+		groups = append(groups, versionGroup{l, others[l]})
+	}
+	return groups
 }
 
 func machineTypeLabel(mt api.GardenerCloudProfileMachineType) string {
@@ -198,18 +261,6 @@ func machineTypeLabel(mt api.GardenerCloudProfileMachineType) string {
 		label += " (unusable)"
 	}
 	return label
-}
-
-func machineImageList(images []api.GardenerCloudProfileMachineImage) string {
-	out := make([]string, 0, len(images))
-	for _, img := range images {
-		versions := make([]string, 0, len(img.Versions))
-		for _, v := range img.Versions {
-			versions = append(versions, v.Version)
-		}
-		out = append(out, fmt.Sprintf("%s (%s)", img.Name, strings.Join(versions, ", ")))
-	}
-	return strings.Join(out, "; ")
 }
 
 func regionList(regions []api.GardenerCloudProfileRegion) string {
