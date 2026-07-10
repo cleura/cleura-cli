@@ -10,8 +10,10 @@ import (
 
 func newWhoamiCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "whoami",
-		Short:   "Show the currently authenticated user",
+		Use:   "whoami",
+		Short: "Show the currently authenticated user",
+		Long: `Show the account the current credentials authenticate as — the user's ID, name
+and privileges — to confirm which identity and profile are in effect.`,
 		Example: "  cleura whoami\n  cleura whoami -o json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

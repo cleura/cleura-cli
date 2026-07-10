@@ -20,8 +20,11 @@ func newUserCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "user",
 		Short: "View users in the Cleura account",
-		Args:  cobra.NoArgs,
-		RunE:  groupHelp,
+		Long: `View the users in your Cleura account and their privileges. This needs the
+'users' privilege or account-admin rights; to see your own account use
+'cleura whoami'.`,
+		Args: cobra.NoArgs,
+		RunE: groupHelp,
 	}
 	cmd.AddCommand(
 		newUserListCommand(opts),

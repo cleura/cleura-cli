@@ -2,6 +2,12 @@
 
 Set the current profile
 
+### Synopsis
+
+Set the current profile — the one commands use when --profile and
+CLEURA_PROFILE are not set. The profile must already exist; create one with
+'cleura login --profile <name>'.
+
 ```
 cleura config profile use <name> [flags]
 ```

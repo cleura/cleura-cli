@@ -2,6 +2,12 @@
 
 Manage named profiles (list, use, set, rename, delete)
 
+### Synopsis
+
+Manage named profiles. Each profile stores an endpoint, username, API token and
+optional region/project; 'cleura login' creates one, and the current profile is
+used unless --profile or CLEURA_PROFILE selects another.
+
 ```
 cleura config profile [flags]
 ```

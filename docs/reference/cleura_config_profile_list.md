@@ -2,6 +2,11 @@
 
 List configured profiles
 
+### Synopsis
+
+List the configured profiles. The current profile is marked and stored tokens
+are never shown; use -o json for scripting.
+
 ```
 cleura config profile list [flags]
 ```

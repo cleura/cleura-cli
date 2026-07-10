@@ -2,6 +2,14 @@
 
 Manage CLI configuration and profiles
 
+### Synopsis
+
+Manage the cleura CLI's configuration and named profiles: view the effective
+settings and where each comes from, find the config file, and add or switch
+profiles. The config file is internal to the CLI, not an API — scripts should
+use 'cleura config get-credentials' or 'cleura config view -o json' instead of
+reading it.
+
 ```
 cleura config [flags]
 ```

@@ -16,6 +16,11 @@ func newConfigCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage CLI configuration and profiles",
+		Long: `Manage the cleura CLI's configuration and named profiles: view the effective
+settings and where each comes from, find the config file, and add or switch
+profiles. The config file is internal to the CLI, not an API — scripts should
+use 'cleura config get-credentials' or 'cleura config view -o json' instead of
+reading it.`,
 		// Fail loudly on typo'd subcommands instead of exit-0 help output.
 		Args: cobra.NoArgs,
 		RunE: groupHelp,
@@ -37,8 +42,11 @@ func newProfileCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "profile",
 		Short: "Manage named profiles (list, use, set, rename, delete)",
-		Args:  cobra.NoArgs,
-		RunE:  groupHelp,
+		Long: `Manage named profiles. Each profile stores an endpoint, username, API token and
+optional region/project; 'cleura login' creates one, and the current profile is
+used unless --profile or CLEURA_PROFILE selects another.`,
+		Args: cobra.NoArgs,
+		RunE: groupHelp,
 	}
 	cmd.AddCommand(
 		newListProfilesCommand(opts),
@@ -311,8 +319,11 @@ the rename. Refuses if the new name already exists.`,
 
 func newUseProfileCommand(opts *globalOptions) *cobra.Command {
 	return &cobra.Command{
-		Use:               "use <name>",
-		Short:             "Set the current profile",
+		Use:   "use <name>",
+		Short: "Set the current profile",
+		Long: `Set the current profile — the one commands use when --profile and
+CLEURA_PROFILE are not set. The profile must already exist; create one with
+'cleura login --profile <name>'.`,
 		Example:           "  cleura config profile use compliant",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeProfileNameArg,
@@ -354,8 +365,10 @@ func newListProfilesCommand(opts *globalOptions) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "list",
-		Short:   "List configured profiles",
+		Use:   "list",
+		Short: "List configured profiles",
+		Long: `List the configured profiles. The current profile is marked and stored tokens
+are never shown; use -o json for scripting.`,
 		Example: "  cleura config profile list\n  cleura config profile list -o json   # tokens are never included",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

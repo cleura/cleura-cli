@@ -120,6 +120,7 @@ func newVersionCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Show the cleura version",
+		Long:  "Show the cleura CLI version. Use -o json for a machine-readable value.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := struct {

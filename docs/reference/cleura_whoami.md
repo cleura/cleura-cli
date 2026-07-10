@@ -2,6 +2,11 @@
 
 Show the currently authenticated user
 
+### Synopsis
+
+Show the account the current credentials authenticate as — the user's ID, name
+and privileges — to confirm which identity and profile are in effect.
+
 ```
 cleura whoami [flags]
 ```

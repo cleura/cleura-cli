@@ -2,6 +2,12 @@
 
 View users in the Cleura account
 
+### Synopsis
+
+View the users in your Cleura account and their privileges. This needs the
+'users' privilege or account-admin rights; to see your own account use
+'cleura whoami'.
+
 ```
 cleura user [flags]
 ```

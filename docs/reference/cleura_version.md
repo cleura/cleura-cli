@@ -2,6 +2,10 @@
 
 Show the cleura version
 
+### Synopsis
+
+Show the cleura CLI version. Use -o json for a machine-readable value.
+
 ```
 cleura version [flags]
 ```
