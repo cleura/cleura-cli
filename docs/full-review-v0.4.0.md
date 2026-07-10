@@ -131,11 +131,22 @@ assumption; API lists ascending); CI `CLEURA_USERNAME` vs `CLEURA_API_USERNAME`
 (different roles — a CI-defined value passed to `-u`, vs the env var the CLI
 reads); `login` identity-replace lacking `--yes` (CI uses the password path).
 
-## Recommended fix batches
+## Fix batches — all shipped 2026-07-10
 
-- **R-A — scripting contracts** (highest CI/DX value): `get-credentials` cloud
-  fix, `check-name` exit-2, `config view` positioning + token cleanup.
-- **R-B — README refresh**: cover the v0.4.0 surface; fix the tool-integration
-  guidance and the config-view contradiction.
-- **R-C — consistency polish**: `whoami` Long, `version` Example, `user list`
-  view-model, monitoring precision, no-file completion, the trivial Long/const.
+- **R-A — scripting contracts** (`1ae6eab`, `b060524`, `75fe187`):
+  `get-credentials` no longer invents `cloud:public` for a private cloud (+ a
+  `requireCloud` gardener guard); `check-name --exit-code` returns 2 for taken;
+  `get-credentials` positioned as the sole script contract, `config view` as a
+  human diagnostic.
+- **R-C — consistency polish** (`93bd4ed`): `whoami` Long, `version` Example,
+  `monitoring` precision, `user list` view-model (2FA/privileges in json),
+  dynamic `<shoot-name>` completion + no-file completion on resource args, and
+  the trivial Long/const fixes.
+- **R-B — README refresh** (`a12d75b`): a full "Gardener Kubernetes clusters"
+  section covering the v0.4.0 surface; corrected tool-integration guidance;
+  private-cloud (custom cloud name) documented.
+
+Each was built, `go test`ed, and (where applicable) live-verified against
+`claudetestuser`/`hampus-tf-test`. Exit-code differentiation stays a
+dx-backlog enhancement. **client-api-wishlist.md needed no new entries** —
+every finding was CLI-side.
