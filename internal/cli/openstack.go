@@ -29,6 +29,8 @@ more than one (list them with 'cleura openstack domain list').`,
 	cmd.AddCommand(
 		newOpenstackDomainCommand(opts),
 		newOpenstackProjectCommand(opts),
+		newOpenstackRoleCommand(opts),
+		newOpenstackUserCommand(opts),
 	)
 	return cmd
 }
@@ -312,6 +314,554 @@ stays but is turned off.`,
 	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
 	addOutputFlag(cmd, opts)
 	return cmd
+}
+
+func newOpenstackRoleCommand(opts *globalOptions) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "role",
+		Short: "View OpenStack roles and manage role assignments",
+		Long:  "View the OpenStack (Keystone) roles that can be granted to users on projects, and manage role assignments (see 'cleura openstack role assignment').",
+		Args:  cobra.NoArgs,
+		RunE:  groupHelp,
+	}
+	cmd.AddCommand(
+		newOpenstackRoleListCommand(opts),
+		newOpenstackRoleAssignmentCommand(opts),
+	)
+	return cmd
+}
+
+func newOpenstackRoleListCommand(opts *globalOptions) *cobra.Command {
+	var domain string
+	cmd := &cobra.Command{
+		Use:     "list",
+		Short:   "List the assignable OpenStack roles",
+		Long:    "List the OpenStack (Keystone) roles available in a domain — the names accepted by 'cleura openstack user grant --role'.",
+		Example: "  cleura openstack role list\n  cleura openstack role list -o json",
+		Args:    cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, settings, err := opts.settings()
+			if err != nil {
+				return err
+			}
+			client, err := opts.authenticatedClient(settings)
+			if err != nil {
+				return err
+			}
+			domainID, err := resolveDomain(cmd, settings, client, domain)
+			if err != nil {
+				return err
+			}
+			resp, err := client.OpenStackIdentityListRolesWithResponse(cmd.Context(), domainID)
+			if err != nil {
+				return fmt.Errorf("listing roles: %w", err)
+			}
+			if resp.JSON200 == nil {
+				return apiAuthError("listing roles", settings, resp.HTTPResponse, resp.Body)
+			}
+
+			roles := *resp.JSON200
+			header := []string{"ID", "NAME"}
+			return output.Render(cmd.OutOrStdout(), opts.output, roles, func(w io.Writer) error {
+				if len(roles) == 0 {
+					opts.infof(cmd, "No roles available")
+					return output.Table(w, header, nil)
+				}
+				sorted := append([]api.OpenStackIdentityProjectRole(nil), roles...)
+				slices.SortFunc(sorted, func(a, b api.OpenStackIdentityProjectRole) int {
+					return strings.Compare(a.Name, b.Name)
+				})
+				rows := make([][]string, 0, len(sorted))
+				for _, r := range sorted {
+					rows = append(rows, []string{r.Id, r.Name})
+				}
+				return output.Table(w, header, rows)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (default: the account's only domain)")
+	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	addOutputFlag(cmd, opts)
+	return cmd
+}
+
+func newOpenstackRoleAssignmentCommand(opts *globalOptions) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "assignment",
+		Short: "Manage role assignments (a user's roles on a project)",
+		Long: `Manage OpenStack role assignments — the binding of a user, a project, and one
+or more roles. 'create' grants access, 'delete' revokes it, and 'list' shows a
+user's assignments across projects.`,
+		Args: cobra.NoArgs,
+		RunE: groupHelp,
+	}
+	cmd.AddCommand(
+		newOpenstackRoleAssignmentCreateCommand(opts),
+		newOpenstackRoleAssignmentListCommand(opts),
+		newOpenstackRoleAssignmentDeleteCommand(opts),
+	)
+	return cmd
+}
+
+func newOpenstackRoleAssignmentCreateCommand(opts *globalOptions) *cobra.Command {
+	var domain, user, project string
+	var roles []string
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Grant a user roles on a project",
+		Long: `Grant an OpenStack user one or more roles on a project (an additive role
+assignment). The user is given by name or ID and the roles by name (resolved
+against the domain's roles — see 'cleura openstack role list'); the project is
+an ID.`,
+		Example: `  cleura openstack role assignment create --user alice --role member --project-id <id>
+  cleura openstack role assignment create --user alice --role member,load-balancer_member --project-id <id>`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, settings, err := opts.settings()
+			if err != nil {
+				return err
+			}
+			client, err := opts.authenticatedClient(settings)
+			if err != nil {
+				return err
+			}
+			domainID, err := resolveDomain(cmd, settings, client, domain)
+			if err != nil {
+				return err
+			}
+			u, err := resolveUser(cmd, settings, client, domainID, user)
+			if err != nil {
+				return err
+			}
+			roleIDs, err := resolveRoleIDs(cmd, settings, client, domainID, roles)
+			if err != nil {
+				return err
+			}
+
+			body := api.OpenStackIdentityGrantProjectAccessJSONRequestBody{
+				Projects: []api.OpenStackIdentityProjectAccessRequest{
+					{ProjectId: project, Roles: roleIDs},
+				},
+			}
+			resp, err := client.OpenStackIdentityGrantProjectAccessWithResponse(cmd.Context(), domainID, u.Id, body)
+			if err != nil {
+				return fmt.Errorf("creating role assignment: %w", err)
+			}
+			// Success is a body-less 2xx, so check the status code.
+			if resp.StatusCode() < 200 || resp.StatusCode() > 299 {
+				return apiAuthError("creating role assignment", settings, resp.HTTPResponse, resp.Body)
+			}
+			opts.infof(cmd, "Granted %s on project %s to user %q", strings.Join(roles, ", "), project, u.Name)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (default: the account's only domain)")
+	cmd.Flags().StringVar(&user, "user", "", "User name or ID to grant access to")
+	cmd.Flags().StringVar(&project, "project-id", "", "Project ID to grant access on")
+	cmd.Flags().StringSliceVar(&roles, "role", nil, "Role name(s) to grant, comma-separated (see 'cleura openstack role list')")
+	_ = cmd.MarkFlagRequired("user")
+	_ = cmd.MarkFlagRequired("project-id")
+	_ = cmd.MarkFlagRequired("role")
+	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	return cmd
+}
+
+func newOpenstackRoleAssignmentListCommand(opts *globalOptions) *cobra.Command {
+	var domain, user string
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List a user's role assignments across projects",
+		Long: `List the projects an OpenStack user can access and the roles they hold on each.
+The user is given by name or ID with --user.`,
+		Example: `  cleura openstack role assignment list --user alice
+  cleura openstack role assignment list --user alice -o json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, settings, err := opts.settings()
+			if err != nil {
+				return err
+			}
+			client, err := opts.authenticatedClient(settings)
+			if err != nil {
+				return err
+			}
+			domainID, err := resolveDomain(cmd, settings, client, domain)
+			if err != nil {
+				return err
+			}
+			u, err := resolveUser(cmd, settings, client, domainID, user)
+			if err != nil {
+				return err
+			}
+			resp, err := client.OpenStackIdentityListUserProjectsWithResponse(cmd.Context(), domainID, u.Id)
+			if err != nil {
+				return fmt.Errorf("listing role assignments: %w", err)
+			}
+			if resp.JSON200 == nil {
+				return apiAuthError("listing role assignments", settings, resp.HTTPResponse, resp.Body)
+			}
+
+			memberships := *resp.JSON200
+			header := []string{"PROJECT ID", "PROJECT", "ROLES"}
+			return output.Render(cmd.OutOrStdout(), opts.output, memberships, func(w io.Writer) error {
+				if len(memberships) == 0 {
+					opts.infof(cmd, "User %q has no role assignments in domain %s", u.Name, domainID)
+					return output.Table(w, header, nil)
+				}
+				opts.infof(cmd, "Role assignments for user %q in domain %s:", u.Name, domainID)
+				sorted := append([]api.OpenStackIdentityProjectMembership(nil), memberships...)
+				slices.SortFunc(sorted, func(a, b api.OpenStackIdentityProjectMembership) int {
+					return strings.Compare(a.Name, b.Name)
+				})
+				rows := make([][]string, 0, len(sorted))
+				for _, m := range sorted {
+					rows = append(rows, []string{m.Id, m.Name, roleNames(m.Roles)})
+				}
+				return output.Table(w, header, rows)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (default: the account's only domain)")
+	cmd.Flags().StringVar(&user, "user", "", "User name or ID whose assignments to list")
+	_ = cmd.MarkFlagRequired("user")
+	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	addOutputFlag(cmd, opts)
+	return cmd
+}
+
+func newOpenstackRoleAssignmentDeleteCommand(opts *globalOptions) *cobra.Command {
+	var domain, user, project, role string
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Revoke a user's role on a project",
+		Long: `Revoke one role from an OpenStack user on a project. The user is given by name
+or ID and the role by name; the project is an ID. Reversible with 'create'.`,
+		Example: "  cleura openstack role assignment delete --user alice --role member --project-id <id>",
+		Args:    cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, settings, err := opts.settings()
+			if err != nil {
+				return err
+			}
+			client, err := opts.authenticatedClient(settings)
+			if err != nil {
+				return err
+			}
+			domainID, err := resolveDomain(cmd, settings, client, domain)
+			if err != nil {
+				return err
+			}
+			u, err := resolveUser(cmd, settings, client, domainID, user)
+			if err != nil {
+				return err
+			}
+			roleIDs, err := resolveRoleIDs(cmd, settings, client, domainID, []string{role})
+			if err != nil {
+				return err
+			}
+
+			resp, err := client.OpenStackIdentityRevokeProjectAccessWithResponse(cmd.Context(), domainID, u.Id, project, roleIDs[0])
+			if err != nil {
+				return fmt.Errorf("deleting role assignment: %w", err)
+			}
+			// Success is a body-less 2xx, so check the status code.
+			if resp.StatusCode() < 200 || resp.StatusCode() > 299 {
+				return apiAuthError("deleting role assignment", settings, resp.HTTPResponse, resp.Body)
+			}
+			opts.infof(cmd, "Revoked %s on project %s from user %q", role, project, u.Name)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (default: the account's only domain)")
+	cmd.Flags().StringVar(&user, "user", "", "User name or ID to revoke access from")
+	cmd.Flags().StringVar(&project, "project-id", "", "Project ID to revoke access on")
+	cmd.Flags().StringVar(&role, "role", "", "Role name to revoke (see 'cleura openstack role list')")
+	_ = cmd.MarkFlagRequired("user")
+	_ = cmd.MarkFlagRequired("project-id")
+	_ = cmd.MarkFlagRequired("role")
+	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	return cmd
+}
+
+func newOpenstackUserCommand(opts *globalOptions) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "user",
+		Short: "Manage OpenStack users",
+		Long: `Manage OpenStack (Keystone) users, which live under a domain.
+
+These are distinct from Cleura account users ('cleura user'): OpenStack users
+authenticate against OpenStack itself and are granted access to projects via
+roles ('cleura openstack user grant').`,
+		Args: cobra.NoArgs,
+		RunE: groupHelp,
+	}
+	cmd.AddCommand(
+		newOpenstackUserListCommand(opts),
+		newOpenstackUserCreateCommand(opts),
+		newOpenstackUserDeleteCommand(opts),
+	)
+	return cmd
+}
+
+func newOpenstackUserListCommand(opts *globalOptions) *cobra.Command {
+	var domain string
+	cmd := &cobra.Command{
+		Use:     "list",
+		Short:   "List OpenStack users in a domain",
+		Long:    "List the OpenStack (Keystone) users in a domain.",
+		Example: "  cleura openstack user list\n  cleura openstack user list -o json",
+		Args:    cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, settings, err := opts.settings()
+			if err != nil {
+				return err
+			}
+			client, err := opts.authenticatedClient(settings)
+			if err != nil {
+				return err
+			}
+			domainID, err := resolveDomain(cmd, settings, client, domain)
+			if err != nil {
+				return err
+			}
+			resp, err := client.OpenStackIdentityListUsersWithResponse(cmd.Context(), domainID)
+			if err != nil {
+				return fmt.Errorf("listing users: %w", err)
+			}
+			if resp.JSON200 == nil {
+				return apiAuthError("listing users", settings, resp.HTTPResponse, resp.Body)
+			}
+
+			users := *resp.JSON200
+			// The list is scoped to one domain, so the domain is shown once as
+			// context (like kubectl's namespace) rather than as a column repeating
+			// the same value on every row. -o json/yaml keep domain_id per user.
+			header := []string{"ID", "NAME", "ENABLED"}
+			return output.Render(cmd.OutOrStdout(), opts.output, users, func(w io.Writer) error {
+				if len(users) == 0 {
+					opts.infof(cmd, "No OpenStack users in domain %s", domainID)
+					return output.Table(w, header, nil)
+				}
+				opts.infof(cmd, "OpenStack users in domain %s:", domainID)
+				sorted := append([]api.OpenStackIdentityUser(nil), users...)
+				slices.SortFunc(sorted, func(a, b api.OpenStackIdentityUser) int {
+					return strings.Compare(a.Name, b.Name)
+				})
+				rows := make([][]string, 0, len(sorted))
+				for _, u := range sorted {
+					rows = append(rows, []string{u.Id, u.Name, yesNo(u.Enabled)})
+				}
+				return output.Table(w, header, rows)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (default: the account's only domain)")
+	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	addOutputFlag(cmd, opts)
+	return cmd
+}
+
+func newOpenstackUserCreateCommand(opts *globalOptions) *cobra.Command {
+	var domain, description string
+	cmd := &cobra.Command{
+		Use:   "create <name>",
+		Short: "Create an OpenStack user in a domain",
+		Long: `Create an OpenStack user. The password is read from a no-echo prompt, or from
+stdin when piped — it is never passed on the command line. Grant the new user
+access to projects afterwards with 'cleura openstack user grant'.`,
+		Example: `  cleura openstack user create alice
+  printf '%s' "$PASSWORD" | cleura openstack user create alice   # non-interactive (CI)
+  cleura openstack user create svc --description "CI account" -o json`,
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: noFileComp,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+			_, settings, err := opts.settings()
+			if err != nil {
+				return err
+			}
+			client, err := opts.authenticatedClient(settings)
+			if err != nil {
+				return err
+			}
+			domainID, err := resolveDomain(cmd, settings, client, domain)
+			if err != nil {
+				return err
+			}
+
+			// Password never comes from a flag: no-echo prompt on a TTY, piped
+			// stdin otherwise (secret handles both). Mirrors 'cleura login'.
+			password, err := newPrompter(cmd).secret(cmd.Context(), "Password for the new user")
+			if err != nil {
+				return err
+			}
+			if password == "" {
+				return fmt.Errorf("password must not be empty")
+			}
+
+			body := api.OpenStackIdentityCreateUserJSONRequestBody{Name: name, Password: password}
+			if description != "" {
+				body.Description = &description
+			}
+			resp, err := client.OpenStackIdentityCreateUserWithResponse(cmd.Context(), domainID, body)
+			if err != nil {
+				return fmt.Errorf("creating user: %w", err)
+			}
+			if resp.JSON201 == nil {
+				return apiAuthError("creating user", settings, resp.HTTPResponse, resp.Body)
+			}
+
+			user := *resp.JSON201
+			opts.infof(cmd, "Created OpenStack user %q (ID %s) in domain %s", user.Name, user.Id, user.DomainId)
+			return output.Render(cmd.OutOrStdout(), opts.output, user, func(w io.Writer) error {
+				kv := output.NewKVWriter(w)
+				kv.Row("ID", user.Id)
+				kv.Row("Name", user.Name)
+				kv.Row("Domain", user.DomainId)
+				kv.Row("Enabled", yesNo(user.Enabled))
+				if d := strDeref(user.Description); d != "" {
+					kv.Row("Description", d)
+				}
+				return kv.Flush()
+			})
+		},
+	}
+	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID to create the user in (default: the account's only domain)")
+	cmd.Flags().StringVar(&description, "description", "", "Optional user description")
+	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	addOutputFlag(cmd, opts)
+	return cmd
+}
+
+func newOpenstackUserDeleteCommand(opts *globalOptions) *cobra.Command {
+	var domain string
+	var yes bool
+	cmd := &cobra.Command{
+		Use:   "delete <user>",
+		Short: "Delete an OpenStack user",
+		Long: `Delete an OpenStack user, given by name or ID. This is irreversible. The
+command asks for confirmation and refuses on a non-interactive terminal unless
+--yes is given.`,
+		Example: `  cleura openstack user delete alice
+  cleura openstack user delete <user-id> --yes`,
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: noFileComp,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, settings, err := opts.settings()
+			if err != nil {
+				return err
+			}
+			client, err := opts.authenticatedClient(settings)
+			if err != nil {
+				return err
+			}
+			domainID, err := resolveDomain(cmd, settings, client, domain)
+			if err != nil {
+				return err
+			}
+			// Resolve name-or-ID first so the confirmation can name the user, and
+			// a typo'd user fails before we prompt to delete anything.
+			user, err := resolveUser(cmd, settings, client, domainID, args[0])
+			if err != nil {
+				return err
+			}
+
+			if !yes {
+				ok, err := newPrompter(cmd).confirm(cmd.Context(), fmt.Sprintf("Delete OpenStack user %q (ID %s)? This cannot be undone", user.Name, user.Id))
+				if err != nil {
+					return err
+				}
+				if !ok {
+					return fmt.Errorf("aborted; rerun with --yes to confirm")
+				}
+			}
+
+			resp, err := client.OpenStackIdentityDeleteUserWithResponse(cmd.Context(), domainID, user.Id)
+			if err != nil {
+				return fmt.Errorf("deleting user: %w", err)
+			}
+			// Success is a body-less 2xx, so check the status code.
+			if resp.StatusCode() < 200 || resp.StatusCode() > 299 {
+				return apiAuthError("deleting user", settings, resp.HTTPResponse, resp.Body)
+			}
+			opts.infof(cmd, "Deleted OpenStack user %q (ID %s)", user.Name, user.Id)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID the user is in (default: the account's only domain)")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the confirmation prompt (required on a non-interactive terminal)")
+	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	return cmd
+}
+
+// resolveRoleIDs maps role names to their IDs for a domain (grant takes role
+// UUIDs, not names), reading the domain's roles and delegating the mapping.
+func resolveRoleIDs(cmd *cobra.Command, settings config.Settings, client *cleura.Client, domainID string, names []string) ([]string, error) {
+	resp, err := client.OpenStackIdentityListRolesWithResponse(cmd.Context(), domainID)
+	if err != nil {
+		return nil, fmt.Errorf("listing roles: %w", err)
+	}
+	if resp.JSON200 == nil {
+		return nil, apiAuthError("listing roles", settings, resp.HTTPResponse, resp.Body)
+	}
+	return roleIDsByName(*resp.JSON200, names)
+}
+
+// roleIDsByName resolves role names to IDs, erroring on an unknown name with the
+// available names listed. Pure, so the mapping is unit-testable without a client.
+func roleIDsByName(roles []api.OpenStackIdentityProjectRole, names []string) ([]string, error) {
+	byName := make(map[string]string, len(roles))
+	available := make([]string, 0, len(roles))
+	for _, r := range roles {
+		byName[r.Name] = r.Id
+		available = append(available, r.Name)
+	}
+	ids := make([]string, 0, len(names))
+	for _, n := range names {
+		id, ok := byName[n]
+		if !ok {
+			slices.Sort(available)
+			return nil, fmt.Errorf("unknown role %q; available roles: %s", n, strings.Join(available, ", "))
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+// resolveUser resolves a user name-or-ID to the user in a domain, listing the
+// domain's users and matching by ID or exact name. There is no single-user GET,
+// so a list is the only way to look one up (and it validates existence).
+func resolveUser(cmd *cobra.Command, settings config.Settings, client *cleura.Client, domainID, arg string) (*api.OpenStackIdentityUser, error) {
+	resp, err := client.OpenStackIdentityListUsersWithResponse(cmd.Context(), domainID)
+	if err != nil {
+		return nil, fmt.Errorf("looking up user %q: %w", arg, err)
+	}
+	if resp.JSON200 == nil {
+		return nil, apiAuthError("looking up user", settings, resp.HTTPResponse, resp.Body)
+	}
+	return userByNameOrID(*resp.JSON200, arg)
+}
+
+// userByNameOrID finds a user by exact ID or name. Pure, so it is unit-testable.
+func userByNameOrID(users []api.OpenStackIdentityUser, arg string) (*api.OpenStackIdentityUser, error) {
+	for i := range users {
+		if users[i].Id == arg || users[i].Name == arg {
+			return &users[i], nil
+		}
+	}
+	return nil, fmt.Errorf("no OpenStack user with name or ID %q in this domain", arg)
+}
+
+// roleNames joins a membership's role names for the table, or "-" when none.
+func roleNames(roles *[]api.OpenStackIdentityProjectRole) string {
+	if roles == nil || len(*roles) == 0 {
+		return "-"
+	}
+	names := make([]string, 0, len(*roles))
+	for _, r := range *roles {
+		names = append(names, r.Name)
+	}
+	return strings.Join(names, ", ")
 }
 
 // renderProjectKV writes a project as key/value rows for the default table

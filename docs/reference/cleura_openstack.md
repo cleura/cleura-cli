@@ -36,4 +36,6 @@ cleura openstack [flags]
 * [cleura](cleura.md)	 - Command-line interface for Cleura Cloud
 * [cleura openstack domain](cleura_openstack_domain.md)	 - View OpenStack domains
 * [cleura openstack project](cleura_openstack_project.md)	 - Manage OpenStack projects
+* [cleura openstack role](cleura_openstack_role.md)	 - View OpenStack roles and manage role assignments
+* [cleura openstack user](cleura_openstack_user.md)	 - Manage OpenStack users
 
