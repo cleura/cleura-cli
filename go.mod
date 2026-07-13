@@ -3,7 +3,7 @@ module github.com/cleura/cleura-cli
 go 1.25.0
 
 require (
-	github.com/cleura/cleura-client-go v0.1.0
+	github.com/cleura/cleura-client-go v0.2.0
 	github.com/spf13/cobra v1.10.1
 	golang.org/x/term v0.34.0
 	gopkg.in/yaml.v3 v3.0.1

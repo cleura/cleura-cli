@@ -86,6 +86,7 @@ from.`,
 		newUserCommand(opts),
 		newConfigCommand(opts),
 		newGardenerCommand(opts),
+		newOpenstackCommand(opts),
 		newVersionCommand(opts),
 	)
 
