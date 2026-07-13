@@ -81,8 +81,20 @@ func newOpenstackDomainListCommand(opts *globalOptions) *cobra.Command {
 					opts.infof(cmd, "No OpenStack domains available")
 					return output.Table(w, header, nil)
 				}
-				rows := make([][]string, 0, len(domains))
-				for _, d := range domains {
+				// Sort the table (by name, then area, then id — names are often
+				// non-unique); -o json/yaml keep API order.
+				sorted := append([]api.CommonOpenStackDomain(nil), domains...)
+				slices.SortFunc(sorted, func(a, b api.CommonOpenStackDomain) int {
+					if c := strings.Compare(strDeref(a.Name), strDeref(b.Name)); c != 0 {
+						return c
+					}
+					if c := strings.Compare(a.Area.Name, b.Area.Name); c != 0 {
+						return c
+					}
+					return strings.Compare(a.Id, b.Id)
+				})
+				rows := make([][]string, 0, len(sorted))
+				for _, d := range sorted {
 					rows = append(rows, []string{d.Id, strDeref(d.Name), d.Area.Name, d.Status})
 				}
 				return output.Table(w, header, rows)
@@ -259,6 +271,9 @@ stays but is turned off.`,
 			// it). Validate this usage error before any auth or network work.
 			body := api.OpenStackIdentityEditProjectJSONRequestBody{}
 			if cmd.Flags().Changed("name") {
+				if err := requireNonEmpty("name", name); err != nil {
+					return err
+				}
 				body.Name = &name
 			}
 			if cmd.Flags().Changed("description") {
@@ -336,7 +351,7 @@ func newOpenstackRoleListCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "List the assignable OpenStack roles",
-		Long:    "List the OpenStack (Keystone) roles available in a domain — the names accepted by 'cleura openstack user grant --role'.",
+		Long:    "List the OpenStack (Keystone) roles available in a domain — the names accepted by 'cleura openstack role assignment create --role'.",
 		Example: "  cleura openstack role list\n  cleura openstack role list -o json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -417,6 +432,16 @@ an ID.`,
   cleura openstack role assignment create --user alice --role member,load-balancer_member --project-id <id>`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// MarkFlagRequired only checks presence, so guard empty values too.
+			if err := requireNonEmpty("user", user); err != nil {
+				return err
+			}
+			if err := requireNonEmpty("project-id", project); err != nil {
+				return err
+			}
+			if len(roles) == 0 {
+				return fmt.Errorf("--role must name at least one role")
+			}
 			_, settings, err := opts.settings()
 			if err != nil {
 				return err
@@ -477,6 +502,9 @@ The user is given by name or ID with --user.`,
   cleura openstack role assignment list --user alice -o json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireNonEmpty("user", user); err != nil {
+				return err
+			}
 			_, settings, err := opts.settings()
 			if err != nil {
 				return err
@@ -539,6 +567,15 @@ or ID and the role by name; the project is an ID. Reversible with 'create'.`,
 		Example: "  cleura openstack role assignment delete --user alice --role member --project-id <id>",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireNonEmpty("user", user); err != nil {
+				return err
+			}
+			if err := requireNonEmpty("project-id", project); err != nil {
+				return err
+			}
+			if err := requireNonEmpty("role", role); err != nil {
+				return err
+			}
 			_, settings, err := opts.settings()
 			if err != nil {
 				return err
@@ -591,7 +628,7 @@ func newOpenstackUserCommand(opts *globalOptions) *cobra.Command {
 
 These are distinct from Cleura account users ('cleura user'): OpenStack users
 authenticate against OpenStack itself and are granted access to projects via
-roles ('cleura openstack user grant').`,
+roles ('cleura openstack role assignment create').`,
 		Args: cobra.NoArgs,
 		RunE: groupHelp,
 	}
@@ -668,7 +705,7 @@ func newOpenstackUserCreateCommand(opts *globalOptions) *cobra.Command {
 		Short: "Create an OpenStack user in a domain",
 		Long: `Create an OpenStack user. The password is read from a no-echo prompt, or from
 stdin when piped — it is never passed on the command line. Grant the new user
-access to projects afterwards with 'cleura openstack user grant'.`,
+access to projects afterwards with 'cleura openstack role assignment create'.`,
 		Example: `  cleura openstack user create alice
   printf '%s' "$PASSWORD" | cleura openstack user create alice   # non-interactive (CI)
   cleura openstack user create svc --description "CI account" -o json`,
@@ -861,7 +898,33 @@ func roleNames(roles *[]api.OpenStackIdentityProjectRole) string {
 	for _, r := range *roles {
 		names = append(names, r.Name)
 	}
+	slices.Sort(names) // deterministic order for the table and for scripts
 	return strings.Join(names, ", ")
+}
+
+// requireNonEmpty rejects an empty value for a flag cobra marked required.
+// cobra's MarkFlagRequired only checks that a flag was set, so `--flag ""` still
+// passes; this closes that gap with a clear usage error before any network work.
+func requireNonEmpty(name, val string) error {
+	if strings.TrimSpace(val) == "" {
+		return fmt.Errorf("--%s must not be empty", name)
+	}
+	return nil
+}
+
+// domainLabel is a human label for a domain in disambiguation/completion output.
+// Domain names are frequently not unique (several "CCP_Domain_NNNN" per account),
+// so the area (region) is what actually tells them apart.
+func domainLabel(d api.CommonOpenStackDomain) string {
+	name, area := strDeref(d.Name), d.Area.Name
+	switch {
+	case name != "" && area != "":
+		return name + " — " + area
+	case area != "":
+		return area
+	default:
+		return name
+	}
 }
 
 // renderProjectKV writes a project as key/value rows for the default table
@@ -907,8 +970,8 @@ func chooseSoleDomain(domains []api.CommonOpenStackDomain) (string, error) {
 	default:
 		choices := make([]string, 0, len(domains))
 		for _, d := range domains {
-			if n := strDeref(d.Name); n != "" {
-				choices = append(choices, fmt.Sprintf("%s (%s)", d.Id, n))
+			if label := domainLabel(d); label != "" {
+				choices = append(choices, fmt.Sprintf("%s (%s)", d.Id, label))
 			} else {
 				choices = append(choices, d.Id)
 			}
@@ -935,8 +998,8 @@ func completeOpenstackDomains(opts *globalOptions) func(*cobra.Command, []string
 		}
 		out := make([]string, 0, len(*resp.JSON200))
 		for _, d := range *resp.JSON200 {
-			if n := strDeref(d.Name); n != "" {
-				out = append(out, d.Id+"\t"+n)
+			if label := domainLabel(d); label != "" {
+				out = append(out, d.Id+"\t"+label)
 			} else {
 				out = append(out, d.Id)
 			}

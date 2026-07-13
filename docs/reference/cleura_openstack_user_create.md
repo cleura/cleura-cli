@@ -6,7 +6,7 @@ Create an OpenStack user in a domain
 
 Create an OpenStack user. The password is read from a no-echo prompt, or from
 stdin when piped — it is never passed on the command line. Grant the new user
-access to projects afterwards with 'cleura openstack user grant'.
+access to projects afterwards with 'cleura openstack role assignment create'.
 
 ```
 cleura openstack user create <name> [flags]

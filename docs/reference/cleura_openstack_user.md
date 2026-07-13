@@ -8,7 +8,7 @@ Manage OpenStack (Keystone) users, which live under a domain.
 
 These are distinct from Cleura account users ('cleura user'): OpenStack users
 authenticate against OpenStack itself and are granted access to projects via
-roles ('cleura openstack user grant').
+roles ('cleura openstack role assignment create').
 
 ```
 cleura openstack user [flags]

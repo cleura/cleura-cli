@@ -4,7 +4,7 @@ List the assignable OpenStack roles
 
 ### Synopsis
 
-List the OpenStack (Keystone) roles available in a domain — the names accepted by 'cleura openstack user grant --role'.
+List the OpenStack (Keystone) roles available in a domain — the names accepted by 'cleura openstack role assignment create --role'.
 
 ```
 cleura openstack role list [flags]
