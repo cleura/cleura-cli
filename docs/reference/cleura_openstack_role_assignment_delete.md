@@ -20,7 +20,7 @@ cleura openstack role assignment delete [flags]
 ### Options
 
 ```
-      --domain string       OpenStack domain ID (default: the account's only domain)
+      --domain string       OpenStack domain ID (required unless the account has a single domain)
   -h, --help                help for delete
       --project-id string   Project ID to revoke access on
       --role string         Role name to revoke (see 'cleura openstack role list')

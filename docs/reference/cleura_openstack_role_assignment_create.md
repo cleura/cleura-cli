@@ -23,7 +23,7 @@ cleura openstack role assignment create [flags]
 ### Options
 
 ```
-      --domain string       OpenStack domain ID (default: the account's only domain)
+      --domain string       OpenStack domain ID (required unless the account has a single domain)
   -h, --help                help for create
       --project-id string   Project ID to grant access on
       --role strings        Role name(s) to grant, comma-separated (see 'cleura openstack role list')

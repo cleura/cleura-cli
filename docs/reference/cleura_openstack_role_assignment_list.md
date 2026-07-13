@@ -21,7 +21,7 @@ cleura openstack role assignment list [flags]
 ### Options
 
 ```
-      --domain string   OpenStack domain ID (default: the account's only domain)
+      --domain string   OpenStack domain ID (required unless the account has a single domain)
   -h, --help            help for list
   -o, --output string   Output format: table, json, yaml (default "table")
       --user string     User name or ID whose assignments to list

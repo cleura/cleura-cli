@@ -5,6 +5,19 @@
 Built on the generated [cleura-client-go](https://github.com/cleura/cleura-client-go)
 API client, commands are added incrementally as the API surface matures.
 
+> [!WARNING]
+> **Early (`0.x`) development.** The CLI has been tested against live Cleura
+> environments and is functional, but command coverage is still limited and its
+> commands and flags may change between `0.x` releases.
+
+**Currently supported:**
+
+- **Auth** — `cleura login` / `logout` / `whoami` (SMS 2FA; token or password for CI)
+- **Account users** — `cleura user` (view users and their privileges)
+- **Configuration** — `cleura config` (profiles; `get-credentials` for tooling like the Terraform provider)
+- **Gardener Kubernetes** — `cleura gardener` (shoots, worker groups, cloud profiles, kubeconfig/SSH access, day-2 ops, CA rotation, monitoring)
+- **OpenStack identity** — `cleura openstack` (domains, projects, users, role assignments)
+
 ## Install
 
 This repository is private, so Go must fetch it directly from GitHub instead
@@ -32,7 +45,8 @@ cleura whoami -o json     # machine-readable output
 cleura user list                                             # account users with their privileges
 cleura user get johndoe                                      # one user, full privilege breakdown
 cleura gardener shoot list --region sto1 --project-id <id>   # your Kubernetes clusters
-                                                             # (full Gardener tour below)
+cleura openstack project list                                # OpenStack projects, users, roles
+                                                             # (full tours below)
 
 cleura logout             # revoke and remove the stored token (do this last)
 ```
@@ -116,6 +130,62 @@ Destructive operations (`enable-ha`, `ca rotate`, ...) ask for confirmation and
 refuse on a non-interactive terminal — pass `--yes` in CI. Every read command
 supports `-o json`/`-o yaml`.
 
+## OpenStack identity (projects, users, roles)
+
+`cleura openstack` manages OpenStack (Keystone) identity — domains, projects,
+users, and their role assignments. OpenStack users are **distinct from Cleura
+account users** (`cleura user`): they authenticate against OpenStack itself.
+
+Almost every command is scoped to a **domain** and needs `--domain <domain-id>`.
+Cleura gives an account a domain per region, so you normally have several — the CLI
+auto-selects a domain only when the account has exactly one; otherwise `--domain` is
+required. The exceptions are `domain list` and `project list`, which take no
+`--domain` — use them to find the IDs:
+
+```sh
+cleura openstack domain list                       # domains + IDs and their region/area — find the one you want
+cleura openstack project list                      # projects you can access, grouped by region
+```
+
+Everything else takes `--domain <domain-id>`. Lists within a domain:
+
+```sh
+cleura openstack user list --domain <domain-id>    # OpenStack users in the domain
+cleura openstack role list --domain <domain-id>    # assignable roles (member, load-balancer_member, ...)
+```
+
+Projects (the API has no delete — `--disable` is the closest):
+
+```sh
+cleura openstack project create my-project --domain <domain-id> --description "team sandbox"   # prints the new project + ID
+cleura openstack project edit <project-id> --domain <domain-id> --name new-name                # rename
+cleura openstack project edit <project-id> --domain <domain-id> --disable                      # pseudo-delete (turn it off)
+```
+
+Users — the new user's password is read from a no-echo prompt or piped stdin,
+never from a flag:
+
+```sh
+cleura openstack user create alice --domain <domain-id>                          # prompts for the password (no echo)
+printf '%s' "$PASSWORD" | cleura openstack user create svc --domain <domain-id>  # non-interactive (CI)
+cleura openstack user delete alice --domain <domain-id> --yes                    # by name or ID (--yes for CI)
+```
+
+Role assignments — grant a user roles on a project (a role assignment is the
+user + project + role binding):
+
+```sh
+cleura openstack role assignment create --user alice --role member --project-id <project-id> --domain <domain-id>
+cleura openstack role assignment create --user alice --role member,load-balancer_member --project-id <project-id> --domain <domain-id>
+cleura openstack role assignment list   --user alice --domain <domain-id>        # projects alice can access + roles held
+cleura openstack role assignment delete --user alice --role member --project-id <project-id> --domain <domain-id>
+```
+
+`--user` accepts a name or an ID and `--role` takes role names (both resolved for
+you); `--project-id` and `--domain` are IDs (from `project list` and `domain list`).
+`user delete` confirms and refuses on a non-interactive terminal unless `--yes`.
+Every read command supports `-o json`/`-o yaml`.
+
 ## Configuration
 
 Settings are resolved with the precedence **flags > environment > profile > defaults**.
@@ -189,8 +259,11 @@ stay clean), `--debug` (log HTTP exchanges to stderr with credentials redacted).
 
 Scoped flags, offered only where they apply: `--output/-o` (table, json, yaml) on
 commands that render output; `--region` and `--project-id` on `gardener` commands
-(and on `cleura login`, which stores them in the profile). Environment variables
-`CLEURA_REGION`/`CLEURA_PROJECT_ID` still apply everywhere they are relevant.
+(and on `cleura login`, which stores them in the profile); `--domain` on most
+`cleura openstack` commands (normally required — an account usually has several
+domains, one per region; auto-selected only when there is exactly one).
+Environment variables `CLEURA_REGION`/`CLEURA_PROJECT_ID` still apply everywhere
+they are relevant.
 
 Profile values can be changed without re-logging in:
 

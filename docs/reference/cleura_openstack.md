@@ -1,15 +1,17 @@
 ## cleura openstack
 
-Manage OpenStack identity resources (domains, projects)
+Manage OpenStack identity resources (domains, projects, users, roles)
 
 ### Synopsis
 
-Manage OpenStack (Keystone) identity resources — domains and projects.
+Manage OpenStack (Keystone) identity resources — domains, projects, users, and
+role assignments.
 
-These are distinct from Cleura account users ('cleura user'): OpenStack projects
-live under a domain and are addressed by an opaque domain ID. Most accounts have a
-single domain, which the CLI selects automatically; pass --domain when there is
-more than one (list them with 'cleura openstack domain list').
+These are distinct from Cleura account users ('cleura user'): OpenStack users
+authenticate against OpenStack itself. Almost every command is scoped to a domain
+and needs --domain <id>; an account usually has several domains (one per region),
+so it is normally required — the CLI auto-selects only when there is exactly one.
+'domain list' and 'project list' take no --domain; use them to find the IDs.
 
 ```
 cleura openstack [flags]

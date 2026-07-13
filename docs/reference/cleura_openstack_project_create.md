@@ -27,7 +27,7 @@ cleura openstack project create <name> [flags]
 
 ```
       --description string   Optional project description
-      --domain string        OpenStack domain ID to create the project in (default: the account's only domain)
+      --domain string        OpenStack domain ID to create the project in (required unless the account has a single domain)
   -h, --help                 help for create
   -o, --output string        Output format: table, json, yaml (default "table")
 ```

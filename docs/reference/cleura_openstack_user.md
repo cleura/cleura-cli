@@ -32,7 +32,7 @@ cleura openstack user [flags]
 
 ### SEE ALSO
 
-* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources (domains, projects)
+* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources (domains, projects, users, roles)
 * [cleura openstack user create](cleura_openstack_user_create.md)	 - Create an OpenStack user in a domain
 * [cleura openstack user delete](cleura_openstack_user_delete.md)	 - Delete an OpenStack user
 * [cleura openstack user list](cleura_openstack_user_list.md)	 - List OpenStack users in a domain
