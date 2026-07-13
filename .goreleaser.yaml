@@ -1,0 +1,101 @@
+# GoReleaser configuration — https://goreleaser.com
+#
+# Cut a release by pushing a semver tag:
+#     git tag v0.5.0 && git push origin v0.5.0
+# The release workflow (.github/workflows/release.yml) runs `goreleaser release`,
+# which builds the binaries, writes checksums, signs them with cosign, and
+# publishes a GitHub Release. Validate changes locally with `goreleaser check`.
+version: 2
+
+project_name: cleura
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: cleura
+    main: ./cmd/cleura
+    binary: cleura
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      # Matches the Makefile: the version is stamped into main.version.
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}" # reproducible builds
+
+archives:
+  - id: cleura
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: "checksums.txt"
+
+# Sign the checksum file with cosign (keyless / Sigstore) so downloads can be
+# verified. Runs only in the release workflow, which installs cosign and grants
+# `id-token: write` for keyless OIDC signing.
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    output: true
+    signature: "${artifact}.sig"
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--output-signature=${signature}"
+      - "--output-certificate=${certificate}"
+      - "${artifact}"
+      - "--yes"
+
+# Homebrew cask for `brew install cleura/tap/cleura` (goreleaser uses casks for
+# CLI binaries now). Disabled until the tap exists: create the cleura/homebrew-tap
+# repository, add a HOMEBREW_TAP_GITHUB_TOKEN secret (a PAT with write access to
+# it), then set skip_upload to false.
+homebrew_casks:
+  - name: cleura
+    skip_upload: true
+    repository:
+      owner: cleura
+      name: homebrew-tap
+    homepage: "https://github.com/cleura/cleura-cli"
+    description: "Command-line interface for Cleura Cloud"
+
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "Merge pull request"
+      - "Merge branch"
+
+release:
+  # v0.5.0-rc.1 and the like are published as pre-releases automatically.
+  prerelease: auto

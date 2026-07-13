@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a problem with the cleura CLI
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve the cleura CLI. **Please do not include tokens,
+        passwords, or other secrets** — `--debug` output already redacts credentials.
+  - type: input
+    id: version
+    attributes:
+      label: cleura version
+      description: Output of `cleura version`.
+      placeholder: v0.5.0
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS / architecture
+      placeholder: macOS 14 (arm64)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: The command you ran, what you expected, and what happened instead. Include error output (add `--debug` if useful).
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: false

@@ -20,20 +20,34 @@ API client, commands are added incrementally as the API surface matures.
 
 ## Install
 
-This repository is private, so Go must fetch it directly from GitHub instead
-of the public module proxy. One-time setup, then install:
+**Install script** (Linux/macOS) — downloads the latest release binary, verifies
+its checksum, and installs it:
 
 ```sh
-git config --global url."git@github.com:".insteadOf "https://github.com/"  # fetch GitHub over SSH
-export GOPRIVATE='github.com/cleura/*'                                     # skip proxy + checksum DB
+curl -fsSL https://raw.githubusercontent.com/cleura/cleura-cli/main/install.sh | sh
+```
 
+Installs to `/usr/local/bin` (uses `sudo` if needed); override with
+`BINDIR=$HOME/.local/bin`, or pin a version with `CLEURA_VERSION=v0.7.0`.
+
+**Prebuilt binary** — or download an archive for your OS/architecture from the
+[latest release](https://github.com/cleura/cleura-cli/releases/latest) and put
+`cleura` on your `PATH`. Every release ships a `checksums.txt` signed with
+[cosign](https://github.com/sigstore/cosign).
+
+**With Go** (1.25+):
+
+```sh
 go install github.com/cleura/cleura-cli/cmd/cleura@latest
 ```
 
-(In CI, use an access token instead of SSH — see [`examples/ci/`](examples/ci/).)
+**Homebrew** (once the tap is published):
 
-From a checkout: `make install`. Prebuilt binaries are planned once the
-release pipeline lands.
+```sh
+brew install cleura/tap/cleura
+```
+
+From a checkout: `make install`.
 
 ## Getting started
 

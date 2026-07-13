@@ -3,9 +3,6 @@
 # Repository configuration (Settings > Secrets and variables > Actions):
 #   variables: CLEURA_USERNAME, CLEURA_PROJECT_ID
 #   secrets:   CLEURA_API_PASSWORD
-#              GH_READ_TOKEN (only while the cleura repos are private: a
-#              fine-grained PAT with read access to cleura/cleura-cli and
-#              cleura/cleura-client-go, for `go install`)
 
 name: cleura-example
 
@@ -20,15 +17,9 @@ jobs:
         with:
           go-version: stable
 
-      # Once binary releases exist, replace this step with a download from
-      # GitHub Releases (or a setup action).
+      # Or download a prebuilt binary from the GitHub Releases instead.
       - name: Install cleura
-        env:
-          GOPRIVATE: github.com/cleura/*
-          GH_TOKEN: ${{ secrets.GH_READ_TOKEN }}
-        run: |
-          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
-          go install github.com/cleura/cleura-cli/cmd/cleura@latest
+        run: go install github.com/cleura/cleura-cli/cmd/cleura@latest
 
       - name: Log in to Cleura
         env:

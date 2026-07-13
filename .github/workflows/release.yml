@@ -1,0 +1,37 @@
+name: release
+
+# Publish a release when a semver tag is pushed:
+#   git tag v0.5.0 && git push origin v0.5.0
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the GitHub Release and upload assets
+  id-token: write # keyless cosign signing (Sigstore OIDC)
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history + tags, so `git describe` / changelog work
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - uses: sigstore/cosign-installer@v3 # provides `cosign` for signing checksums
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: set this secret (a PAT with write access to
+          # cleura/homebrew-tap) and flip `skip_upload` in .goreleaser.yaml to
+          # publish the Homebrew formula.
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
