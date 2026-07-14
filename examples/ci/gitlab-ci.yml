@@ -5,19 +5,13 @@
 #   CLEURA_API_PASSWORD   (protected + masked) — read by `cleura login`
 #   CLEURA_PROJECT_ID     (protected)
 #
-# The image below builds the CLI from source while the repos are private and
-# unreleased; once binary releases exist, replace the install lines with a
-# download of the released artifact.
+# The golang image below installs the CLI with `go install`; you can instead
+# download a prebuilt binary from the GitHub Releases.
 
 cleura-example:
   stage: deploy
   image: golang:1.25
-  variables:
-    GOPRIVATE: github.com/cleura/*
   before_script:
-    # Only while the cleura repos are private: credentials for `go install`.
-    # $GH_READ_TOKEN is a GitHub PAT with read access to both cleura repos.
-    - git config --global url."https://x-access-token:${GH_READ_TOKEN}@github.com/".insteadOf "https://github.com/"
     - go install github.com/cleura/cleura-cli/cmd/cleura@latest
     - export PATH="$PATH:$(go env GOPATH)/bin"
     # CLEURA_API_PASSWORD is picked up from the environment — no prompt, no pipe.

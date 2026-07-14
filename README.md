@@ -20,20 +20,71 @@ API client, commands are added incrementally as the API surface matures.
 
 ## Install
 
-This repository is private, so Go must fetch it directly from GitHub instead
-of the public module proxy. One-time setup, then install:
+**Install script** (Linux/macOS) — downloads the latest release binary, verifies
+its checksum, and installs it:
 
 ```sh
-git config --global url."git@github.com:".insteadOf "https://github.com/"  # fetch GitHub over SSH
-export GOPRIVATE='github.com/cleura/*'                                     # skip proxy + checksum DB
+curl -fsSL https://raw.githubusercontent.com/cleura/cleura-cli/main/install.sh | sh
+```
 
+Installs to `/usr/local/bin` (uses `sudo` if needed); override with
+`BINDIR=$HOME/.local/bin`, or pin a version with `CLEURA_VERSION=v0.7.0`.
+
+**Prebuilt binary** — or download an archive for your OS/architecture from the
+[latest release](https://github.com/cleura/cleura-cli/releases/latest) and put
+`cleura` on your `PATH`. Every release ships a `checksums.txt` signed with
+[cosign](https://github.com/sigstore/cosign) — see [Verifying releases](#verifying-releases).
+
+**With Go** (1.25+):
+
+```sh
 go install github.com/cleura/cleura-cli/cmd/cleura@latest
 ```
 
-(In CI, use an access token instead of SSH — see [`examples/ci/`](examples/ci/).)
+**Homebrew** (once the tap is published):
 
-From a checkout: `make install`. Prebuilt binaries are planned once the
-release pipeline lands.
+```sh
+brew install cleura/tap/cleura
+```
+
+From a checkout: `make install`.
+
+## Verifying releases
+
+Every release ships a `checksums.txt` (SHA-256 of each archive) signed with
+[cosign](https://github.com/sigstore/cosign) using keyless
+[Sigstore](https://www.sigstore.dev/) signing, alongside the signature
+`checksums.txt.sig` and the signing certificate `checksums.txt.pem`. The install
+script already checks the checksum of what it downloads; the steps below go one
+further and prove that `checksums.txt` itself was produced by this repository's
+release workflow (not tampered with or re-signed by someone else).
+
+Requires [`cosign`](https://github.com/sigstore/cosign) (`brew install cosign`):
+
+```sh
+VERSION=v0.7.0   # the release you're verifying
+base="https://github.com/cleura/cleura-cli/releases/download/$VERSION"
+
+# 1. Fetch the checksum file, its signature, and the signing certificate.
+curl -fsSLO "$base/checksums.txt"
+curl -fsSLO "$base/checksums.txt.sig"
+curl -fsSLO "$base/checksums.txt.pem"
+
+# 2. Verify checksums.txt was signed by this repo's release workflow.
+cosign verify-blob checksums.txt \
+  --signature checksums.txt.sig \
+  --certificate checksums.txt.pem \
+  --certificate-identity "https://github.com/cleura/cleura-cli/.github/workflows/release.yml@refs/tags/$VERSION" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+
+# 3. checksums.txt is now trusted — verify your downloaded archive against it
+#    (run from the directory where you downloaded the archive).
+sha256sum --ignore-missing -c checksums.txt        # macOS: shasum -a 256 --ignore-missing -c checksums.txt
+```
+
+`cosign verify-blob` prints `Verified OK` on success. To verify any release without
+editing the tag, swap `--certificate-identity` for
+`--certificate-identity-regexp '^https://github\.com/cleura/cleura-cli/\.github/workflows/release\.yml@refs/tags/v'`.
 
 ## Getting started
 
@@ -67,7 +118,7 @@ login needs no prompt, no pipe, and no secret on any command line:
 ```yaml
 deploy:
   script:
-    - cleura login -u "$CLEURA_USERNAME" --profile ci --cloud compliant --region sto1 --project-id $PROJECT
+    - cleura login -u "$CLEURA_USERNAME" --profile ci --cloud public --region sto2 --project-id $PROJECT
     - cleura gardener shoot list        # profile "ci" now carries token, cloud, region and project
 ```
 
@@ -135,6 +186,15 @@ supports `-o json`/`-o yaml`.
 `cleura openstack` manages OpenStack (Keystone) identity — domains, projects,
 users, and their role assignments. OpenStack users are **distinct from Cleura
 account users** (`cleura user`): they authenticate against OpenStack itself.
+
+> [!NOTE]
+> **`cleura openstack` is not a general-purpose OpenStack client, and is not meant to
+> replace [`cleura-openstackclient`](https://github.com/cleura/cleura-openstackclient).**
+> It deliberately covers only Keystone *identity* provisioning (projects, users,
+> roles, and role assignments) — the setup that pairs with `cleura login` and the
+> Cleura control plane. For compute, networking, storage, images, and the rest of the
+> OpenStack API, use `cleura-openstackclient`. That hand-off is why the command
+> surface here is intentionally small.
 
 Almost every command is scoped to a **domain** and needs `--domain <domain-id>`.
 Cleura gives an account a domain per region, so you normally have several — the CLI
@@ -224,7 +284,7 @@ profiles:
     cloud: public            # public, compliant, or a private cloud name (see acme)
     username: johndoe
     token: "..."             # stored by "cleura login"
-    region: sto1             # optional defaults for project-scoped commands
+    region: sto2             # optional defaults for project-scoped commands
     project_id: a1b2c3
   acme:                      # a private cloud sets both: the URL for the endpoint,
     cloud: acme              # the cloud name for API path parameters
@@ -285,11 +345,11 @@ $ cleura config get-credentials
 {
   "version": 1,
   "profile": "work",
-  "cloud": "compliant",
-  "endpoint": "https://rest.compliant.cleura.cloud",
+  "cloud": "public",
+  "endpoint": "https://rest.cleura.cloud",
   "username": "svc",
   "token": "...",
-  "region": "sto1",
+  "region": "sto2",
   "project_id": "p-1",
   "token_stored_at": "2026-07-08T08:00:00Z"
 }

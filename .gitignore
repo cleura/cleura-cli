@@ -5,3 +5,4 @@ __debug*
 go.work
 go.work.sum
 .agent
+/dist
