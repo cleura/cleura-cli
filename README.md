@@ -271,8 +271,8 @@ cleura config profile rename production prod         # rename (keeps the token; 
 cleura config profile delete compliant
 ```
 
-Logging in always makes that profile the current one (the `az login`/`gcloud`
-convention); `config profile use` switches between already-logged-in profiles.
+Logging in always makes that profile the current one; `config profile use`
+switches between already-logged-in profiles.
 
 When in doubt about what a command will actually use, `cleura config view` shows the
 effective settings and the source of each value (flag, `$CLEURA_*` variable, profile,
