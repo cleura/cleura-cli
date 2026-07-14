@@ -5,7 +5,7 @@ Create an OpenStack project in a domain
 ### Synopsis
 
 Create an OpenStack project. The project is created in the account's domain;
-when the account has more than one domain, choose one with --domain (list them
+when the account has more than one domain, choose one with --domain-id (list them
 with 'cleura openstack domain list').
 
 The created project — including its ID — is printed; use -o json to capture the
@@ -20,14 +20,14 @@ cleura openstack project create <name> [flags]
 ```
   cleura openstack project create my-project
   cleura openstack project create my-project --description "team sandbox"
-  cleura openstack project create my-project --domain <domain-id> -o json
+  cleura openstack project create my-project --domain-id <domain-id> -o json
 ```
 
 ### Options
 
 ```
       --description string   Optional project description
-      --domain string        OpenStack domain ID to create the project in (required unless the account has a single domain)
+      --domain-id string     OpenStack domain ID to create the project in (required unless the account has a single domain)
   -h, --help                 help for create
   -o, --output string        Output format: table, json, yaml (default "table")
 ```

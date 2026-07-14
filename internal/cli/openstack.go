@@ -22,9 +22,9 @@ role assignments.
 
 These are distinct from Cleura account users ('cleura user'): OpenStack users
 authenticate against OpenStack itself. Almost every command is scoped to a domain
-and needs --domain <id>; an account usually has several domains (one per region),
+and needs --domain-id <id>; an account usually has several domains (one per region),
 so it is normally required — the CLI auto-selects only when there is exactly one.
-'domain list' and 'project list' take no --domain; use them to find the IDs.`,
+'domain list' and 'project list' take no --domain-id; use them to find the IDs.`,
 		Args: cobra.NoArgs,
 		RunE: groupHelp,
 	}
@@ -43,7 +43,7 @@ func newOpenstackDomainCommand(opts *globalOptions) *cobra.Command {
 		Short: "View OpenStack domains",
 		Long: `View the OpenStack (Keystone) domains available to your account. A domain ID
 identifies where projects and users live; it is what 'cleura openstack project
-create --domain' expects.`,
+create --domain-id' expects.`,
 		Args: cobra.NoArgs,
 		RunE: groupHelp,
 	}
@@ -55,7 +55,7 @@ func newOpenstackDomainListCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "List the OpenStack domains for the account",
-		Long:    "List the OpenStack (Keystone) domains available to your account, with the domain ID used by 'cleura openstack project create --domain'.",
+		Long:    "List the OpenStack (Keystone) domains available to your account, with the domain ID used by 'cleura openstack project create --domain-id'.",
 		Example: "  cleura openstack domain list\n  cleura openstack domain list -o json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -197,14 +197,14 @@ func newOpenstackProjectCreateCommand(opts *globalOptions) *cobra.Command {
 		Use:   "create <name>",
 		Short: "Create an OpenStack project in a domain",
 		Long: `Create an OpenStack project. The project is created in the account's domain;
-when the account has more than one domain, choose one with --domain (list them
+when the account has more than one domain, choose one with --domain-id (list them
 with 'cleura openstack domain list').
 
 The created project — including its ID — is printed; use -o json to capture the
 ID for scripting (e.g. to grant access or launch resources in it).`,
 		Example: `  cleura openstack project create my-project
   cleura openstack project create my-project --description "team sandbox"
-  cleura openstack project create my-project --domain <domain-id> -o json`,
+  cleura openstack project create my-project --domain-id <domain-id> -o json`,
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: noFileComp,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -242,9 +242,9 @@ ID for scripting (e.g. to grant access or launch resources in it).`,
 			})
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID to create the project in (required unless the account has a single domain)")
+	cmd.Flags().StringVar(&domain, "domain-id", "", "OpenStack domain ID to create the project in (required unless the account has a single domain)")
 	cmd.Flags().StringVar(&description, "description", "", "Optional project description")
-	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	_ = cmd.RegisterFlagCompletionFunc("domain-id", completeOpenstackDomains(opts))
 	addOutputFlag(cmd, opts)
 	return cmd
 }
@@ -322,13 +322,13 @@ stays but is turned off.`,
 			})
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID the project is in (required unless the account has a single domain)")
+	cmd.Flags().StringVar(&domain, "domain-id", "", "OpenStack domain ID the project is in (required unless the account has a single domain)")
 	cmd.Flags().StringVar(&name, "name", "", "New project name")
 	cmd.Flags().StringVar(&description, "description", "", "New project description (pass \"\" to clear)")
 	cmd.Flags().BoolVar(&enable, "enable", false, "Enable the project")
 	cmd.Flags().BoolVar(&disable, "disable", false, "Disable the project (the closest thing to deletion)")
 	cmd.MarkFlagsMutuallyExclusive("enable", "disable")
-	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	_ = cmd.RegisterFlagCompletionFunc("domain-id", completeOpenstackDomains(opts))
 	addOutputFlag(cmd, opts)
 	return cmd
 }
@@ -396,8 +396,8 @@ func newOpenstackRoleListCommand(opts *globalOptions) *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (required unless the account has a single domain)")
-	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	cmd.Flags().StringVar(&domain, "domain-id", "", "OpenStack domain ID (required unless the account has a single domain)")
+	_ = cmd.RegisterFlagCompletionFunc("domain-id", completeOpenstackDomains(opts))
 	addOutputFlag(cmd, opts)
 	return cmd
 }
@@ -482,14 +482,14 @@ an ID.`,
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (required unless the account has a single domain)")
+	cmd.Flags().StringVar(&domain, "domain-id", "", "OpenStack domain ID (required unless the account has a single domain)")
 	cmd.Flags().StringVar(&user, "user", "", "User name or ID to grant access to")
 	cmd.Flags().StringVar(&project, "project-id", "", "Project ID to grant access on")
 	cmd.Flags().StringSliceVar(&roles, "role", nil, "Role name(s) to grant, comma-separated (see 'cleura openstack role list')")
 	_ = cmd.MarkFlagRequired("user")
 	_ = cmd.MarkFlagRequired("project-id")
 	_ = cmd.MarkFlagRequired("role")
-	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	_ = cmd.RegisterFlagCompletionFunc("domain-id", completeOpenstackDomains(opts))
 	return cmd
 }
 
@@ -551,10 +551,10 @@ The user is given by name or ID with --user.`,
 			})
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (required unless the account has a single domain)")
+	cmd.Flags().StringVar(&domain, "domain-id", "", "OpenStack domain ID (required unless the account has a single domain)")
 	cmd.Flags().StringVar(&user, "user", "", "User name or ID whose assignments to list")
 	_ = cmd.MarkFlagRequired("user")
-	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	_ = cmd.RegisterFlagCompletionFunc("domain-id", completeOpenstackDomains(opts))
 	addOutputFlag(cmd, opts)
 	return cmd
 }
@@ -611,14 +611,14 @@ or ID and the role by name; the project is an ID. Reversible with 'create'.`,
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (required unless the account has a single domain)")
+	cmd.Flags().StringVar(&domain, "domain-id", "", "OpenStack domain ID (required unless the account has a single domain)")
 	cmd.Flags().StringVar(&user, "user", "", "User name or ID to revoke access from")
 	cmd.Flags().StringVar(&project, "project-id", "", "Project ID to revoke access on")
 	cmd.Flags().StringVar(&role, "role", "", "Role name to revoke (see 'cleura openstack role list')")
 	_ = cmd.MarkFlagRequired("user")
 	_ = cmd.MarkFlagRequired("project-id")
 	_ = cmd.MarkFlagRequired("role")
-	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	_ = cmd.RegisterFlagCompletionFunc("domain-id", completeOpenstackDomains(opts))
 	return cmd
 }
 
@@ -694,8 +694,8 @@ func newOpenstackUserListCommand(opts *globalOptions) *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID (required unless the account has a single domain)")
-	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	cmd.Flags().StringVar(&domain, "domain-id", "", "OpenStack domain ID (required unless the account has a single domain)")
+	_ = cmd.RegisterFlagCompletionFunc("domain-id", completeOpenstackDomains(opts))
 	addOutputFlag(cmd, opts)
 	return cmd
 }
@@ -765,9 +765,9 @@ access to projects afterwards with 'cleura openstack role assignment create'.`,
 			})
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID to create the user in (required unless the account has a single domain)")
+	cmd.Flags().StringVar(&domain, "domain-id", "", "OpenStack domain ID to create the user in (required unless the account has a single domain)")
 	cmd.Flags().StringVar(&description, "description", "", "Optional user description")
-	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	_ = cmd.RegisterFlagCompletionFunc("domain-id", completeOpenstackDomains(opts))
 	addOutputFlag(cmd, opts)
 	return cmd
 }
@@ -827,9 +827,9 @@ command asks for confirmation and refuses on a non-interactive terminal unless
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "OpenStack domain ID the user is in (required unless the account has a single domain)")
+	cmd.Flags().StringVar(&domain, "domain-id", "", "OpenStack domain ID the user is in (required unless the account has a single domain)")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the confirmation prompt (required on a non-interactive terminal)")
-	_ = cmd.RegisterFlagCompletionFunc("domain", completeOpenstackDomains(opts))
+	_ = cmd.RegisterFlagCompletionFunc("domain-id", completeOpenstackDomains(opts))
 	return cmd
 }
 
@@ -943,9 +943,9 @@ func renderProjectKV(w io.Writer, p api.OpenStackIdentityProject) error {
 	return kv.Flush()
 }
 
-// resolveDomain returns the domain ID to operate in. An explicit --domain wins;
+// resolveDomain returns the domain ID to operate in. An explicit --domain-id wins;
 // otherwise it lists the account's domains and uses the sole one, erroring when
-// there is not exactly one so the caller must disambiguate with --domain.
+// there is not exactly one so the caller must disambiguate with --domain-id.
 func resolveDomain(cmd *cobra.Command, settings config.Settings, client *cleura.Client, flagDomain string) (string, error) {
 	if flagDomain != "" {
 		return flagDomain, nil
@@ -978,12 +978,12 @@ func chooseSoleDomain(domains []api.CommonOpenStackDomain) (string, error) {
 				choices = append(choices, d.Id)
 			}
 		}
-		return "", fmt.Errorf("the account has %d OpenStack domains; select one with --domain: %s", len(domains), strings.Join(choices, ", "))
+		return "", fmt.Errorf("the account has %d OpenStack domains; select one with --domain-id: %s", len(domains), strings.Join(choices, ", "))
 	}
 }
 
 // completeOpenstackDomains offers domain IDs (with the name as description) for
-// the --domain flag.
+// the --domain-id flag.
 func completeOpenstackDomains(opts *globalOptions) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		_, settings, err := opts.settings()

@@ -20,9 +20,9 @@ cleura openstack user list [flags]
 ### Options
 
 ```
-      --domain string   OpenStack domain ID (required unless the account has a single domain)
-  -h, --help            help for list
-  -o, --output string   Output format: table, json, yaml (default "table")
+      --domain-id string   OpenStack domain ID (required unless the account has a single domain)
+  -h, --help               help for list
+  -o, --output string      Output format: table, json, yaml (default "table")
 ```
 
 ### Options inherited from parent commands

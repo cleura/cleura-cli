@@ -4,7 +4,7 @@ List the OpenStack domains for the account
 
 ### Synopsis
 
-List the OpenStack (Keystone) domains available to your account, with the domain ID used by 'cleura openstack project create --domain'.
+List the OpenStack (Keystone) domains available to your account, with the domain ID used by 'cleura openstack project create --domain-id'.
 
 ```
 cleura openstack domain list [flags]

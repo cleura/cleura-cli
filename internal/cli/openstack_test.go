@@ -17,10 +17,10 @@ func TestChooseSoleDomain(t *testing.T) {
 	if err != nil || got != "dom-1" {
 		t.Errorf("one domain: got (%q, %v), want (\"dom-1\", nil)", got, err)
 	}
-	// More than one → an actionable error that points at --domain.
+	// More than one → an actionable error that points at --domain-id.
 	_, err = chooseSoleDomain([]api.CommonOpenStackDomain{{Id: "dom-1"}, {Id: "dom-2"}})
-	if err == nil || !strings.Contains(err.Error(), "--domain") {
-		t.Errorf("multiple domains: want an error mentioning --domain, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "--domain-id") {
+		t.Errorf("multiple domains: want an error mentioning --domain-id, got %v", err)
 	}
 }
 

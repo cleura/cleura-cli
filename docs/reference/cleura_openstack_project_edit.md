@@ -27,7 +27,7 @@ cleura openstack project edit <project-id> [flags]
 ```
       --description string   New project description (pass "" to clear)
       --disable              Disable the project (the closest thing to deletion)
-      --domain string        OpenStack domain ID the project is in (required unless the account has a single domain)
+      --domain-id string     OpenStack domain ID the project is in (required unless the account has a single domain)
       --enable               Enable the project
   -h, --help                 help for edit
       --name string          New project name

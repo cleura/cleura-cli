@@ -9,9 +9,9 @@ role assignments.
 
 These are distinct from Cleura account users ('cleura user'): OpenStack users
 authenticate against OpenStack itself. Almost every command is scoped to a domain
-and needs --domain <id>; an account usually has several domains (one per region),
+and needs --domain-id <id>; an account usually has several domains (one per region),
 so it is normally required — the CLI auto-selects only when there is exactly one.
-'domain list' and 'project list' take no --domain; use them to find the IDs.
+'domain list' and 'project list' take no --domain-id; use them to find the IDs.
 
 ```
 cleura openstack [flags]

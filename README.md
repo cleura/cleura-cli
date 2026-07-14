@@ -2,6 +2,9 @@
 
 `cleura` — the command-line interface for [Cleura Cloud](https://cleura.com/).
 
+It gives you one scriptable way to authenticate to Cleura and manage your cloud —
+from Gardener Kubernetes clusters to OpenStack identity — on your machine or in CI.
+
 Built on the generated [cleura-client-go](https://github.com/cleura/cleura-client-go)
 API client, commands are added incrementally as the API surface matures.
 
@@ -40,6 +43,9 @@ Installs to `/usr/local/bin` (uses `sudo` if needed); override with
 ```sh
 go install github.com/cleura/cleura-cli/cmd/cleura@latest
 ```
+
+`cleura` is pure Go; if `go install` fails with a C-toolchain error (e.g. a missing
+`stdlib.h`) on a minimal system, prefix the command with `CGO_ENABLED=0`.
 
 **Homebrew** (once the tap is published):
 
@@ -196,53 +202,53 @@ account users** (`cleura user`): they authenticate against OpenStack itself.
 > OpenStack API, use `cleura-openstackclient`. That hand-off is why the command
 > surface here is intentionally small.
 
-Almost every command is scoped to a **domain** and needs `--domain <domain-id>`.
+Almost every command is scoped to a **domain** and needs `--domain-id <domain-id>`.
 Cleura gives an account a domain per region, so you normally have several — the CLI
-auto-selects a domain only when the account has exactly one; otherwise `--domain` is
+auto-selects a domain only when the account has exactly one; otherwise `--domain-id` is
 required. The exceptions are `domain list` and `project list`, which take no
-`--domain` — use them to find the IDs:
+`--domain-id` — use them to find the IDs:
 
 ```sh
 cleura openstack domain list                       # domains + IDs and their region/area — find the one you want
 cleura openstack project list                      # projects you can access, grouped by region
 ```
 
-Everything else takes `--domain <domain-id>`. Lists within a domain:
+Everything else takes `--domain-id <domain-id>`. Lists within a domain:
 
 ```sh
-cleura openstack user list --domain <domain-id>    # OpenStack users in the domain
-cleura openstack role list --domain <domain-id>    # assignable roles (member, load-balancer_member, ...)
+cleura openstack user list --domain-id <domain-id>    # OpenStack users in the domain
+cleura openstack role list --domain-id <domain-id>    # assignable roles (member, load-balancer_member, ...)
 ```
 
 Projects (the API has no delete — `--disable` is the closest):
 
 ```sh
-cleura openstack project create my-project --domain <domain-id> --description "team sandbox"   # prints the new project + ID
-cleura openstack project edit <project-id> --domain <domain-id> --name new-name                # rename
-cleura openstack project edit <project-id> --domain <domain-id> --disable                      # pseudo-delete (turn it off)
+cleura openstack project create my-project --domain-id <domain-id> --description "team sandbox"   # prints the new project + ID
+cleura openstack project edit <project-id> --domain-id <domain-id> --name new-name                # rename
+cleura openstack project edit <project-id> --domain-id <domain-id> --disable                      # pseudo-delete (turn it off)
 ```
 
 Users — the new user's password is read from a no-echo prompt or piped stdin,
 never from a flag:
 
 ```sh
-cleura openstack user create alice --domain <domain-id>                          # prompts for the password (no echo)
-printf '%s' "$PASSWORD" | cleura openstack user create svc --domain <domain-id>  # non-interactive (CI)
-cleura openstack user delete alice --domain <domain-id> --yes                    # by name or ID (--yes for CI)
+cleura openstack user create alice --domain-id <domain-id>                          # prompts for the password (no echo)
+printf '%s' "$PASSWORD" | cleura openstack user create svc --domain-id <domain-id>  # non-interactive (CI)
+cleura openstack user delete alice --domain-id <domain-id> --yes                    # by name or ID (--yes for CI)
 ```
 
 Role assignments — grant a user roles on a project (a role assignment is the
 user + project + role binding):
 
 ```sh
-cleura openstack role assignment create --user alice --role member --project-id <project-id> --domain <domain-id>
-cleura openstack role assignment create --user alice --role member,load-balancer_member --project-id <project-id> --domain <domain-id>
-cleura openstack role assignment list   --user alice --domain <domain-id>        # projects alice can access + roles held
-cleura openstack role assignment delete --user alice --role member --project-id <project-id> --domain <domain-id>
+cleura openstack role assignment create --user alice --role member --project-id <project-id> --domain-id <domain-id>
+cleura openstack role assignment create --user alice --role member,load-balancer_member --project-id <project-id> --domain-id <domain-id>
+cleura openstack role assignment list   --user alice --domain-id <domain-id>        # projects alice can access + roles held
+cleura openstack role assignment delete --user alice --role member --project-id <project-id> --domain-id <domain-id>
 ```
 
 `--user` accepts a name or an ID and `--role` takes role names (both resolved for
-you); `--project-id` and `--domain` are IDs (from `project list` and `domain list`).
+you); `--project-id` and `--domain-id` are IDs (from `project list` and `domain list`).
 `user delete` confirms and refuses on a non-interactive terminal unless `--yes`.
 Every read command supports `-o json`/`-o yaml`.
 
@@ -319,7 +325,7 @@ stay clean), `--debug` (log HTTP exchanges to stderr with credentials redacted).
 
 Scoped flags, offered only where they apply: `--output/-o` (table, json, yaml) on
 commands that render output; `--region` and `--project-id` on `gardener` commands
-(and on `cleura login`, which stores them in the profile); `--domain` on most
+(and on `cleura login`, which stores them in the profile); `--domain-id` on most
 `cleura openstack` commands (normally required — an account usually has several
 domains, one per region; auto-selected only when there is exactly one).
 Environment variables `CLEURA_REGION`/`CLEURA_PROJECT_ID` still apply everywhere
@@ -336,7 +342,7 @@ cleura config path                     # where the config file lives
 ## Tool integration
 
 `cleura config get-credentials` is the stable interface for tools that
-authenticate via the CLI (the Terraform provider's planned `cleura` credential
+authenticate via the CLI (the Terraform provider's `cleura` credential
 source, scripts, anything else). It prints the effective credentials — resolved
 with the usual precedence — as one JSON object:
 
@@ -395,4 +401,9 @@ Add that line to your shell profile to make it permanent.
 make build      # build ./cleura
 make test
 make vet
+make docs       # regenerate docs/reference/ from the CLI's help text
 ```
+
+## License
+
+cleura-cli is licensed under the [Mozilla Public License 2.0](LICENSE).

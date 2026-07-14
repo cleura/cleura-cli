@@ -24,7 +24,7 @@ cleura openstack user create <name> [flags]
 
 ```
       --description string   Optional user description
-      --domain string        OpenStack domain ID to create the user in (required unless the account has a single domain)
+      --domain-id string     OpenStack domain ID to create the user in (required unless the account has a single domain)
   -h, --help                 help for create
   -o, --output string        Output format: table, json, yaml (default "table")
 ```

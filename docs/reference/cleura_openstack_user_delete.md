@@ -22,9 +22,9 @@ cleura openstack user delete <user> [flags]
 ### Options
 
 ```
-      --domain string   OpenStack domain ID the user is in (required unless the account has a single domain)
-  -h, --help            help for delete
-  -y, --yes             Skip the confirmation prompt (required on a non-interactive terminal)
+      --domain-id string   OpenStack domain ID the user is in (required unless the account has a single domain)
+  -h, --help               help for delete
+  -y, --yes                Skip the confirmation prompt (required on a non-interactive terminal)
 ```
 
 ### Options inherited from parent commands

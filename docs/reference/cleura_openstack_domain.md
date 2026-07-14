@@ -6,7 +6,7 @@ View OpenStack domains
 
 View the OpenStack (Keystone) domains available to your account. A domain ID
 identifies where projects and users live; it is what 'cleura openstack project
-create --domain' expects.
+create --domain-id' expects.
 
 ```
 cleura openstack domain [flags]
