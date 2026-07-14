@@ -12,7 +12,7 @@ body:
     attributes:
       label: cleura version
       description: Output of `cleura version`.
-      placeholder: v0.5.0
+      placeholder: v0.7.0
     validations:
       required: true
   - type: input

@@ -68,13 +68,17 @@ echo "Checksum verified."
 tar -xzf "$tmp/$archive" -C "$tmp" cleura || err "failed to extract cleura from $archive"
 
 # --- install ---
+# Create BINDIR if missing so a user-writable target (e.g. BINDIR=$HOME/.local/bin)
+# installs without sudo; only escalate for a dir we can neither create nor write.
+mkdir -p "$BINDIR" 2>/dev/null || true
 if [ -w "$BINDIR" ]; then
 	install -m 0755 "$tmp/cleura" "$BINDIR/cleura"
 elif have sudo; then
 	echo "Installing to $BINDIR (requires sudo)..."
+	sudo mkdir -p "$BINDIR"
 	sudo install -m 0755 "$tmp/cleura" "$BINDIR/cleura"
 else
-	err "$BINDIR is not writable; re-run with sudo, or set BINDIR (e.g. BINDIR=\$HOME/.local/bin)"
+	err "$BINDIR is not writable and could not be created; re-run with sudo, or set BINDIR to a writable path (e.g. BINDIR=\$HOME/.local/bin)"
 fi
 
 echo "Installed $("$BINDIR/cleura" version 2>/dev/null || echo "cleura to $BINDIR")."

@@ -23,7 +23,7 @@ cleura logout --profile ci          # always run this: it revokes the job's toke
 
 | Variable              | Secret? | Purpose                                          |
 |-----------------------|---------|--------------------------------------------------|
-| `CLEURA_USERNAME`     | no      | The account to log in as                          |
+| `CLEURA_USERNAME`     | no      | Account username — a CI variable you choose, passed via `-u` (the CLI does not read it directly) |
 | `CLEURA_API_PASSWORD` | **yes** | Password, read by `cleura login` (never stored)   |
 | `CLEURA_PROJECT_ID`   | no      | OpenStack project for project-scoped commands     |
 

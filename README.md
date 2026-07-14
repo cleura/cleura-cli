@@ -157,7 +157,7 @@ Inspect and access clusters:
 
 ```sh
 cleura gardener shoot get prod                                # full detail: worker groups, maintenance, HA, networking, status
-cleura gardener worker-group list prod                        # a shoot's node pools
+cleura gardener shoot worker-group list prod                  # a shoot's node pools
 cleura gardener shoot kubeconfig prod > prod.kubeconfig       # time-limited admin kubeconfig
 cleura gardener shoot ssh-key prod -f ~/.ssh/prod-nodes.pem   # node SSH private key (written 0600)
 ```
