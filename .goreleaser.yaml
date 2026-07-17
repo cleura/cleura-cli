@@ -63,15 +63,15 @@ signs:
       - "--yes"
 
 # Homebrew cask for `brew install cleura/tap/cleura` (goreleaser uses casks for
-# CLI binaries now). Disabled until the tap exists: create the cleura/homebrew-tap
-# repository, add a HOMEBREW_TAP_GITHUB_TOKEN secret (a PAT with write access to
-# it), then set skip_upload to false.
+# CLI binaries now). Publishes to the cleura/homebrew-tap repository using the
+# HOMEBREW_TAP_GITHUB_TOKEN secret (a PAT with write access to that repo); the
+# release workflow passes it through as an env var.
 homebrew_casks:
   - name: cleura
-    skip_upload: true
     repository:
       owner: cleura
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: "https://github.com/cleura/cleura-cli"
     description: "Command-line interface for Cleura Cloud"
 
