@@ -14,7 +14,7 @@ import (
 func newLogoutCommand(opts *globalOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
-		Short: "Revoke the profile's stored API token and remove it from the configuration",
+		Short: "Log out and revoke the stored API token",
 		Long: `Revoke the selected profile's stored API token server-side and remove it from
 the configuration file. The profile itself (endpoint, username, region,
 project) is kept for the next login.

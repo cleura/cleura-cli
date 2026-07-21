@@ -28,7 +28,7 @@ cleura openstack role [flags]
 
 ### SEE ALSO
 
-* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources (domains, projects, users, roles)
+* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources
 * [cleura openstack role assignment](cleura_openstack_role_assignment.md)	 - Manage role assignments (a user's roles on a project)
 * [cleura openstack role list](cleura_openstack_role_list.md)	 - List the assignable OpenStack roles
 

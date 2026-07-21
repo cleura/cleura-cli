@@ -79,16 +79,31 @@ from.`,
 	// which stays reserved for a possible --verbose.
 	root.Flags().Bool("version", false, "Show the cleura version")
 
-	root.AddCommand(
+	// Group commands so `cleura --help` renders them in titled sections.
+	// Anything left ungrouped (version, and cobra's auto-added help/completion)
+	// falls into cobra's automatic "Additional Commands" bucket.
+	root.AddGroup(
+		&cobra.Group{ID: "core", Title: "Core Commands:"},
+		&cobra.Group{ID: "account", Title: "Account & Configuration:"},
+	)
+	addGrouped := func(group string, cmds ...*cobra.Command) {
+		for _, c := range cmds {
+			c.GroupID = group
+			root.AddCommand(c)
+		}
+	}
+	addGrouped("core",
+		newGardenerCommand(opts),
+		newOpenstackCommand(opts),
+		newUserCommand(opts),
+	)
+	addGrouped("account",
 		newLoginCommand(opts),
 		newLogoutCommand(opts),
 		newWhoamiCommand(opts),
-		newUserCommand(opts),
 		newConfigCommand(opts),
-		newGardenerCommand(opts),
-		newOpenstackCommand(opts),
-		newVersionCommand(opts),
 	)
+	root.AddCommand(newVersionCommand(opts))
 
 	_ = root.RegisterFlagCompletionFunc("cloud", cobra.FixedCompletions([]string{"public", "compliant"}, cobra.ShellCompDirectiveNoFileComp))
 	_ = root.RegisterFlagCompletionFunc("profile", completeProfileNames)
