@@ -1,6 +1,6 @@
 ## cleura logout
 
-Revoke the profile's stored API token and remove it from the configuration
+Log out and revoke the stored API token
 
 ### Synopsis
 

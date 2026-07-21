@@ -1,6 +1,6 @@
 ## cleura openstack
 
-Manage OpenStack identity resources (domains, projects, users, roles)
+Manage OpenStack identity resources
 
 ### Synopsis
 

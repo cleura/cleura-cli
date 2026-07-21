@@ -30,8 +30,8 @@ from.
 * [cleura config](cleura_config.md)	 - Manage CLI configuration and profiles
 * [cleura gardener](cleura_gardener.md)	 - Manage Gardener Kubernetes clusters
 * [cleura login](cleura_login.md)	 - Log in to Cleura Cloud and store an API token
-* [cleura logout](cleura_logout.md)	 - Revoke the profile's stored API token and remove it from the configuration
-* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources (domains, projects, users, roles)
+* [cleura logout](cleura_logout.md)	 - Log out and revoke the stored API token
+* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources
 * [cleura user](cleura_user.md)	 - View users in the Cleura account
 * [cleura version](cleura_version.md)	 - Show the cleura version
 * [cleura whoami](cleura_whoami.md)	 - Show the currently authenticated user

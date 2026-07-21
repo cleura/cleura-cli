@@ -30,6 +30,6 @@ cleura openstack domain [flags]
 
 ### SEE ALSO
 
-* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources (domains, projects, users, roles)
+* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources
 * [cleura openstack domain list](cleura_openstack_domain_list.md)	 - List the OpenStack domains for the account
 

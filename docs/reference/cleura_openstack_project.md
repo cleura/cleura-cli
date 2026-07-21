@@ -28,7 +28,7 @@ cleura openstack project [flags]
 
 ### SEE ALSO
 
-* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources (domains, projects, users, roles)
+* [cleura openstack](cleura_openstack.md)	 - Manage OpenStack identity resources
 * [cleura openstack project create](cleura_openstack_project_create.md)	 - Create an OpenStack project in a domain
 * [cleura openstack project edit](cleura_openstack_project_edit.md)	 - Update an OpenStack project
 * [cleura openstack project list](cleura_openstack_project_list.md)	 - List your OpenStack projects
