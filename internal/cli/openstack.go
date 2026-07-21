@@ -16,7 +16,7 @@ import (
 func newOpenstackCommand(opts *globalOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "openstack",
-		Short: "Manage OpenStack identity resources (domains, projects, users, roles)",
+		Short: "Manage OpenStack identity resources",
 		Long: `Manage OpenStack (Keystone) identity resources — domains, projects, users, and
 role assignments.
 
