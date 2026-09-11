@@ -39,5 +39,5 @@ cleura user get <user-id or username> [flags]
 
 ### SEE ALSO
 
-* [cleura user](cleura_user.md)	 - View users in the Cleura account
+* [cleura user](cleura_user.md)	 - Manage users in the Cleura account
 

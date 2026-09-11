@@ -16,7 +16,7 @@ API client, commands are added incrementally as the API surface matures.
 **Currently supported:**
 
 - **Auth** — `cleura login` / `logout` / `whoami` (SMS 2FA; token or password for CI)
-- **Account users** — `cleura user` (view users and their privileges)
+- **Account users** — `cleura user` (view and manage users, their privileges and passwords)
 - **Configuration** — `cleura config` (profiles; `get-credentials` for tooling like the Terraform provider)
 - **Gardener Kubernetes** — `cleura gardener` (shoots, worker groups, cloud profiles, kubeconfig/SSH access, day-2 ops, CA rotation, monitoring)
 - **OpenStack identity** — `cleura openstack` (domains, projects, users, role assignments)
@@ -101,6 +101,7 @@ cleura whoami -o json     # machine-readable output
 
 cleura user list                                             # account users with their privileges
 cleura user get johndoe                                      # one user, full privilege breakdown
+cleura user create johndoe --email john.doe@example.org      # create one (password from a no-echo prompt)
 cleura gardener shoot list --region sto1 --project-id <id>   # your Kubernetes clusters
 cleura openstack project list                                # OpenStack projects, users, roles
                                                              # (full tours below)
@@ -186,6 +187,54 @@ cleura gardener shoot monitoring worker-group prod wg-primary # worker-group agg
 Destructive operations (`enable-ha`, `ca rotate`, ...) ask for confirmation and
 refuse on a non-interactive terminal — pass `--yes` in CI. Every read command
 supports `-o json`/`-o yaml`.
+
+## Cleura account users
+
+`cleura user` manages the users of your **Cleura account** — the identities that
+log in to the Control Panel and this CLI. They are distinct from the OpenStack
+(Keystone) users that `cleura openstack user` manages. All of it needs the
+`users` privilege or account-admin rights; to see your own account without that
+privilege, use `cleura whoami`.
+
+```sh
+cleura user list                          # everyone, with a privilege summary and 2FA status
+cleura user get johndoe                   # one user (by username or numeric ID), full breakdown
+```
+
+Create a user. The password is read from a no-echo prompt, or from stdin when
+piped — never from a flag:
+
+```sh
+cleura user create johndoe --email john.doe@example.org --first-name John --last-name Doe
+printf '%s' "$PASSWORD" | cleura user create ci-bot --email ci@example.org    # non-interactive (CI)
+```
+
+Edit sends only the flags you pass, so an unset field is never overwritten:
+
+```sh
+cleura user edit johndoe --email new.address@example.org   # may need email verification
+cleura user edit johndoe --first-name Jonathan
+cleura user edit johndoe --set-password                    # prompt for a new password
+cleura user edit ci-bot --ip-restriction 203.0.113.0/24    # replaces the whole set
+cleura user edit ci-bot --clear-ip-restrictions
+```
+
+Delete is irreversible, confirms first, and needs `--yes` on a non-interactive
+terminal. The account you are logged in as cannot be deleted here:
+
+```sh
+cleura user delete johndoe
+cleura user delete 4763 --yes
+```
+
+**These commands do not change privileges.** A new user starts with no access.
+`cleura user list` and `cleura user get` show what a user has; granting and
+revoking is done in the Control Panel for now.
+
+> [!NOTE]
+> **Account-admin rights cannot be changed through the API.** The `ADMIN` column
+> is read-only for every client — the create and edit request bodies have no such
+> field. Grant or revoke it in the Control Panel.
 
 ## OpenStack identity (projects, users, roles)
 
