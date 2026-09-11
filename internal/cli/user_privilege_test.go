@@ -205,13 +205,35 @@ func TestPrivilegeRows(t *testing.T) {
 	if got := privilegeRows(api.CommonUserLoginPrivileges{}, func(s string) string { return s }); len(got) != 0 {
 		t.Errorf("no privileges should render no rows, got %+v", got)
 	}
+
+	// Project scope with an empty grant list grants nothing. This CLI never
+	// writes that state (unsetting the last grant removes the area), but the
+	// Control Panel or another client can, so it must render as what it is
+	// rather than look like account-wide access.
+	empty := api.CommonUserLoginPrivileges{Openstack: &api.CommonUserLoginPrivilege{Type: api.Project}}
+	got := privilegeRows(empty, func(s string) string { return s })
+	if len(got) != 1 || got[0].Scope != "no projects" {
+		t.Errorf("empty project scope = %+v, want scope %q", got, "no projects")
+	}
 }
 
+// stripUUID is load-bearing for both duplicate detection and grant removal, so
+// assert the output, not just that two chosen inputs agree.
 func TestStripUUID(t *testing.T) {
-	if stripUUID(" 8A22C50F-1234-… ") == stripUUID("8a22c50f1234…") {
-		return
+	for in, want := range map[string]string{
+		" 8A22-C50F ": "8a22c50f",
+		"8a22c50f":    "8a22c50f",
+		"AAAA-1111":   "aaaa1111",
+		"":            "",
+	} {
+		if got := stripUUID(in); got != want {
+			t.Errorf("stripUUID(%q) = %q, want %q", in, got, want)
+		}
 	}
-	t.Error("stripUUID must normalize case, dashes and surrounding space")
+	// Different IDs must not normalize onto each other.
+	if stripUUID("aaaa-1111") == stripUUID("bbbb-2222") {
+		t.Error("distinct IDs collided after normalization")
+	}
 }
 
 func TestPrivilegeTarget(t *testing.T) {
