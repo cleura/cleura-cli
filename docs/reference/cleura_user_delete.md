@@ -1,34 +1,31 @@
-## cleura user list
+## cleura user delete
 
-List the users in the account
+Delete a user from the account
 
 ### Synopsis
 
-List the users in the account with their privileges. The PRIVILEGES column
-summarizes each privilege area as area:type (types: full, read, or
-project(n) for per-project grants), compressed to "full (all areas)" when
-every area has full access. The 2FA column counts only active enrollments.
-Use 'cleura user get' for the full breakdown.
+Delete a Cleura account user, given by numeric ID or exact username. This is
+irreversible. The command asks for confirmation and refuses on a
+non-interactive terminal unless --yes is given.
 
-Viewing other users requires the users privilege or account administrator
-rights on the logged-in account.
+The account you are logged in as cannot be deleted here.
 
 ```
-cleura user list [flags]
+cleura user delete <user-id or username> [flags]
 ```
 
 ### Examples
 
 ```
-  cleura user list
-  cleura user list -o json
+  cleura user delete johndoe
+  cleura user delete 4763 --yes
 ```
 
 ### Options
 
 ```
-  -h, --help            help for list
-  -o, --output string   Output format: table, json, yaml (default "table")
+  -h, --help   help for delete
+  -y, --yes    Skip the confirmation prompt (required on a non-interactive terminal)
 ```
 
 ### Options inherited from parent commands
