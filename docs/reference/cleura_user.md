@@ -8,9 +8,10 @@ View and manage the users in your Cleura account and their privileges. This
 needs the 'users' privilege or account-admin rights; to see your own account use
 'cleura whoami'.
 
-Account-admin rights (the ADMIN column) cannot be granted or revoked through the
-API — the create and edit request bodies have no such field. Use the Control
-Panel for that.
+Privileges are their own noun: 'cleura user privilege' grants and revokes
+access, per area or per OpenStack project. Account-admin rights (the ADMIN
+column) cannot be granted or revoked through the API — the create and edit
+request bodies have no such field. Use the Control Panel for that.
 
 ```
 cleura user [flags]
@@ -40,4 +41,5 @@ cleura user [flags]
 * [cleura user edit](cleura_user_edit.md)	 - Change a user's details, privileges or password
 * [cleura user get](cleura_user_get.md)	 - Show one user with the full privilege breakdown
 * [cleura user list](cleura_user_list.md)	 - List the users in the account
+* [cleura user privilege](cleura_user_privilege.md)	 - View and change a user's privileges
 

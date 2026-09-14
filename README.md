@@ -227,9 +227,61 @@ cleura user delete johndoe
 cleura user delete 4763 --yes
 ```
 
-**These commands do not change privileges.** A new user starts with no access.
-`cleura user list` and `cleura user get` show what a user has; granting and
-revoking is done in the Control Panel for now.
+### Privileges
+
+A new user starts with no access. Privileges are their own noun, because they
+come in two shapes: account-wide access to an *area*, or access to specific
+OpenStack *projects*.
+
+```sh
+cleura user privilege list johndoe
+```
+
+```
+AREA        LEVEL     SCOPE
+invoice     read      account-wide
+openstack   project   team-alpha:read, team-beta:full
+```
+
+Grant account-wide access to an area (`account`, `ai-gateway`, `application`,
+`invoice`, `monitoring`, `openstack`, `users`) with `--area`, and access to a
+single project with `--project-id`. The level is `full` or `read`:
+
+```sh
+cleura user privilege set johndoe --area invoice --level read
+cleura user privilege set johndoe --project-id team-alpha --level read
+cleura user privilege set johndoe --project-id team-beta --level full
+```
+
+Each project grant leaves the others alone, so repeat the command to add more.
+Setting an `--area` replaces whatever that area had, including its per-project
+grants, and the command says so when it does.
+
+Remove access the same way:
+
+```sh
+cleura user privilege unset johndoe --project-id team-alpha   # one project
+cleura user privilege unset johndoe --area invoice            # the whole area
+```
+
+`--project-id` takes a project ID or a name. **Project names are not unique
+across regions**, so a name matching more than one project is refused rather
+than guessed:
+
+```
+Error: "team-alpha" matches 2 projects; qualify it as region/name or pass the ID:
+  kna1/team-alpha	bbbb2222…
+  sto2/team-alpha	aaaa1111…
+```
+
+Use `sto2/team-alpha`, or the ID. For a project that is not in your own project
+list (the API offers no account-wide project listing), pass its ID together
+with `--domain-id`.
+
+> [!NOTE]
+> The API has no privilege sub-resource: a privilege change is a read, a merge
+> and a write of the whole user. Two people changing privileges at the same
+> moment can overwrite each other, and the last write wins.
 
 > [!NOTE]
 > **Account-admin rights cannot be changed through the API.** The `ADMIN` column

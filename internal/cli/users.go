@@ -25,9 +25,10 @@ func newUserCommand(opts *globalOptions) *cobra.Command {
 needs the 'users' privilege or account-admin rights; to see your own account use
 'cleura whoami'.
 
-Account-admin rights (the ADMIN column) cannot be granted or revoked through the
-API — the create and edit request bodies have no such field. Use the Control
-Panel for that.`,
+Privileges are their own noun: 'cleura user privilege' grants and revokes
+access, per area or per OpenStack project. Account-admin rights (the ADMIN
+column) cannot be granted or revoked through the API — the create and edit
+request bodies have no such field. Use the Control Panel for that.`,
 		Args: cobra.NoArgs,
 		RunE: groupHelp,
 	}
@@ -37,6 +38,7 @@ Panel for that.`,
 		newUserCreateCommand(opts),
 		newUserEditCommand(opts),
 		newUserDeleteCommand(opts),
+		newUserPrivilegeCommand(opts),
 	)
 	return cmd
 }
