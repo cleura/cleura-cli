@@ -5,8 +5,9 @@ Create a time-limited admin kubeconfig for a shoot cluster
 ### Synopsis
 
 Create an admin kubeconfig for a shoot cluster and print it to stdout,
-or write it to a file with --file. The credential expires after --expiration
-(the API may cap the allowed validity).
+or write it to a file with --file. The credential expires after --expiration;
+the API may cap the request, so the command reports the expiry the API
+actually returned.
 
 A region and project must be selected for gardener commands: pass
 --region/--project-id, set CLEURA_REGION/CLEURA_PROJECT_ID, or store them in the
@@ -27,7 +28,7 @@ cleura gardener shoot kubeconfig <shoot-name> [flags]
 ### Options
 
 ```
-      --expiration duration   How long the kubeconfig stays valid (e.g. 30m, 6h) (default 1h0m0s)
+      --expiration duration   How long the kubeconfig should stay valid (e.g. 30m, 6h); the API may cap it (default 1h0m0s)
   -f, --file string           Write the kubeconfig to this path instead of stdout (created with mode 0600)
   -h, --help                  help for kubeconfig
 ```

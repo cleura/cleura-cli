@@ -637,8 +637,9 @@ func newShootKubeconfigCommand(opts *globalOptions) *cobra.Command {
 		ValidArgsFunction: completeShootName(opts),
 		Short:             "Create a time-limited admin kubeconfig for a shoot cluster",
 		Long: "Create an admin kubeconfig for a shoot cluster and print it to stdout,\n" +
-			"or write it to a file with --file. The credential expires after --expiration\n" +
-			"(the API may cap the allowed validity).\n\n" + projectScopedHelp,
+			"or write it to a file with --file. The credential expires after --expiration;\n" +
+			"the API may cap the request, so the command reports the expiry the API\n" +
+			"actually returned.\n\n" + projectScopedHelp,
 		Example: `  cleura gardener shoot kubeconfig prod > prod.kubeconfig
   cleura gardener shoot kubeconfig prod --expiration 8h -f ~/.kube/prod.yaml
   KUBECONFIG=$(pwd)/prod.kubeconfig kubectl get nodes`,
@@ -658,40 +659,50 @@ func newShootKubeconfigCommand(opts *globalOptions) *cobra.Command {
 				return err
 			}
 
-			resp, err := client.GardenerCreateShootAdminKubeConfigWithResponse(cmd.Context(),
+			// v3, not the deprecated v2 endpoint: v2 answers with a
+			// Content-Type that does not match its body, so its generated
+			// YAML201 field is never populated and the body had to be read raw.
+			// v3 returns a typed JSON envelope that also states the real expiry.
+			resp, err := client.GardenerCreateShootAdminKubeConfigV3WithResponse(cmd.Context(),
 				settings.Cloud, settings.Region, settings.ProjectID, name,
-				api.GardenerCreateShootAdminKubeConfigJSONRequestBody{
+				api.GardenerCreateShootAdminKubeConfigV3JSONRequestBody{
 					ExpirationSeconds: expirationSeconds,
 				})
 			if err != nil {
 				return fmt.Errorf("creating kubeconfig: %w", err)
 			}
-			// The generated YAML201 field is never populated for this endpoint:
-			// the server's Content-Type does not match the spec's text/yaml, and
-			// a kubeconfig (a YAML mapping) cannot unmarshal into the declared
-			// string schema anyway. Read the raw body, like the terraform
-			// provider does.
-			if resp.StatusCode() != http.StatusCreated {
-				return apiAuthError("creating kubeconfig", settings, resp.HTTPResponse, resp.Body)
+			if resp.JSON201 == nil {
+				err := apiAuthError("creating kubeconfig", settings, resp.HTTPResponse, resp.Body)
+				// This route is newer than the rest of the Gardener surface, so
+				// on a private cloud running an older API a 404 can mean the
+				// endpoint is missing rather than the shoot.
+				if resp.StatusCode() == http.StatusNotFound {
+					return fmt.Errorf("%w\nthere may be no shoot %q in this project, or this cloud's API may predate the v3 admin-kubeconfig endpoint", err, name)
+				}
+				return err
 			}
-			if len(resp.Body) == 0 {
-				return fmt.Errorf("creating kubeconfig: API returned an empty body")
+			kubeconfig := resp.JSON201.Kubeconfig
+			if kubeconfig == "" {
+				return fmt.Errorf("creating kubeconfig: API returned an empty kubeconfig")
 			}
-			kubeconfig := string(resp.Body)
+			expiresAt := resp.JSON201.ExpiresAt.Format(time.RFC3339)
 
 			if file == "" {
+				// Data stays on stdout for the KUBECONFIG piping idiom; the
+				// expiry is information, so it goes to stderr.
+				opts.infof(cmd, "Admin kubeconfig for shoot %q is valid until %s", name, expiresAt)
 				fmt.Fprint(cmd.OutOrStdout(), kubeconfig)
 				return nil
 			}
 			if err := writeSecretFile(file, []byte(kubeconfig)); err != nil {
 				return err
 			}
-			opts.infof(cmd, "Wrote admin kubeconfig for shoot %q to %s (requested validity %s; the API may cap it)", name, file, expiration)
+			opts.infof(cmd, "Wrote admin kubeconfig for shoot %q to %s (valid until %s)", name, file, expiresAt)
 			return nil
 		},
 	}
 
-	cmd.Flags().DurationVar(&expiration, "expiration", time.Hour, "How long the kubeconfig stays valid (e.g. 30m, 6h)")
+	cmd.Flags().DurationVar(&expiration, "expiration", time.Hour, "How long the kubeconfig should stay valid (e.g. 30m, 6h); the API may cap it")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "Write the kubeconfig to this path instead of stdout (created with mode 0600)")
 
 	return cmd
