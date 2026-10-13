@@ -2,11 +2,9 @@
 
 `cleura` — the command-line interface for [Cleura Cloud](https://cleura.com/).
 
-It gives you one scriptable way to authenticate to Cleura and manage your cloud —
-from Gardener Kubernetes clusters to OpenStack identity — on your machine or in CI.
+It gives you one scriptable way to authenticate to Cleura and manage your cloud — from Gardener Kubernetes clusters to OpenStack identity — on your machine or in CI.
 
-Built on the generated [cleura-client-go](https://github.com/cleura/cleura-client-go)
-API client, commands are added incrementally as the API surface matures.
+Built on the generated [cleura-client-go](https://github.com/cleura/cleura-client-go) API client, commands are added incrementally as the API surface matures.
 
 > [!WARNING]
 > **Early (`0.x`) development.** The CLI has been tested against live Cleura
@@ -23,20 +21,16 @@ API client, commands are added incrementally as the API surface matures.
 
 ## Install
 
-**Install script** (Linux/macOS) — downloads the latest release binary, verifies
-its checksum, and installs it:
+**Install script** (Linux/macOS) — downloads the latest release binary, verifies its checksum, and installs it:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/cleura/cleura-cli/main/install.sh | sh
 ```
 
-Installs to `/usr/local/bin` (uses `sudo` if needed); override with
-`BINDIR=$HOME/.local/bin`, or pin a version with `CLEURA_VERSION=v0.7.0`.
+Installs to `/usr/local/bin` (uses `sudo` if needed); override with `BINDIR=$HOME/.local/bin`, or pin a version with `CLEURA_VERSION=v0.7.0`.
 
-**Prebuilt binary** — or download an archive for your OS/architecture from the
-[latest release](https://github.com/cleura/cleura-cli/releases/latest) and put
-`cleura` on your `PATH`. Every release ships a `checksums.txt` signed with
-[cosign](https://github.com/sigstore/cosign) — see [Verifying releases](#verifying-releases).
+**Prebuilt binary** — or download an archive for your OS/architecture from the [latest release](https://github.com/cleura/cleura-cli/releases/latest) and put `cleura` on your `PATH`.
+Every release ships a `checksums.txt` signed with [cosign](https://github.com/sigstore/cosign) — see [Verifying releases](#verifying-releases).
 
 **With Go** (1.25+):
 
@@ -44,8 +38,7 @@ Installs to `/usr/local/bin` (uses `sudo` if needed); override with
 go install github.com/cleura/cleura-cli/cmd/cleura@latest
 ```
 
-`cleura` is pure Go; if `go install` fails with a C-toolchain error (e.g. a missing
-`stdlib.h`) on a minimal system, prefix the command with `CGO_ENABLED=0`.
+`cleura` is pure Go; if `go install` fails with a C-toolchain error (e.g. a missing `stdlib.h`) on a minimal system, prefix the command with `CGO_ENABLED=0`.
 
 **Homebrew** (once the tap is published):
 
@@ -57,13 +50,8 @@ From a checkout: `make install`.
 
 ## Verifying releases
 
-Every release ships a `checksums.txt` (SHA-256 of each archive) signed with
-[cosign](https://github.com/sigstore/cosign) using keyless
-[Sigstore](https://www.sigstore.dev/) signing, alongside the signature
-`checksums.txt.sig` and the signing certificate `checksums.txt.pem`. The install
-script already checks the checksum of what it downloads; the steps below go one
-further and prove that `checksums.txt` itself was produced by this repository's
-release workflow (not tampered with or re-signed by someone else).
+Every release ships a `checksums.txt` (SHA-256 of each archive) signed with [cosign](https://github.com/sigstore/cosign) using keyless [Sigstore](https://www.sigstore.dev/) signing, alongside the signature `checksums.txt.sig` and the signing certificate `checksums.txt.pem`.
+The install script already checks the checksum of what it downloads; the steps below go one further and prove that `checksums.txt` itself was produced by this repository's release workflow (not tampered with or re-signed by someone else).
 
 Requires [`cosign`](https://github.com/sigstore/cosign) (`brew install cosign`):
 
@@ -88,9 +76,8 @@ cosign verify-blob checksums.txt \
 sha256sum --ignore-missing -c checksums.txt        # macOS: shasum -a 256 --ignore-missing -c checksums.txt
 ```
 
-`cosign verify-blob` prints `Verified OK` on success. To verify any release without
-editing the tag, swap `--certificate-identity` for
-`--certificate-identity-regexp '^https://github\.com/cleura/cleura-cli/\.github/workflows/release\.yml@refs/tags/v'`.
+`cosign verify-blob` prints `Verified OK` on success.
+To verify any release without editing the tag, swap `--certificate-identity` for `--certificate-identity-regexp '^https://github\.com/cleura/cleura-cli/\.github/workflows/release\.yml@refs/tags/v'`.
 
 ## Getting started
 
@@ -109,18 +96,13 @@ cleura openstack project list                                # OpenStack project
 cleura logout             # revoke and remove the stored token (do this last)
 ```
 
-`--region` and `--project-id` can be stored in the profile (pass them to
-`cleura login`) or set via `CLEURA_REGION` / `CLEURA_PROJECT_ID`.
+`--region` and `--project-id` can be stored in the profile (pass them to `cleura login`) or set via `CLEURA_REGION` / `CLEURA_PROJECT_ID`.
 
-**Two-factor authentication:** SMS is the only 2FA method the CLI supports
-(the API offers no way to complete a WebAuthn ceremony outside the browser).
-Accounts using WebAuthn or passkeys can log in to the Control Panel, create an
-API token there, and store it with
-`echo "$TOKEN" | cleura login -u <username> --token-stdin`.
+**Two-factor authentication:** SMS is the only 2FA method the CLI supports (the API offers no way to complete a WebAuthn ceremony outside the browser).
+Accounts using WebAuthn or passkeys can log in to the Control Panel, create an API token there, and store it with `echo "$TOKEN" | cleura login -u <username> --token-stdin`.
 
-Non-interactive login for CI (single-factor accounts only — SMS 2FA requires an
-interactive terminal). Set `CLEURA_API_PASSWORD` as a masked CI variable and the
-login needs no prompt, no pipe, and no secret on any command line:
+Non-interactive login for CI (single-factor accounts only — SMS 2FA requires an interactive terminal).
+Set `CLEURA_API_PASSWORD` as a masked CI variable and the login needs no prompt, no pipe, and no secret on any command line:
 
 ```yaml
 deploy:
@@ -129,20 +111,15 @@ deploy:
     - cleura gardener shoot list        # profile "ci" now carries token, cloud, region and project
 ```
 
-The password can also be piped on stdin (`echo "$PW" | cleura login -u johndoe`),
-and a pre-created token can be stored with
-`echo "$TOKEN" | cleura login -u johndoe --token-stdin` (validated before storing).
-Note that API tokens expire, so CI jobs should log in per run rather than reuse a
-stored token.
+The password can also be piped on stdin (`echo "$PW" | cleura login -u johndoe`), and a pre-created token can be stored with `echo "$TOKEN" | cleura login -u johndoe --token-stdin` (validated before storing).
+Note that API tokens expire, so CI jobs should log in per run rather than reuse a stored token.
 
-Ready-to-copy pipeline examples (GitHub Actions, GitLab CI, plain shell) live in
-[`examples/ci/`](examples/ci/).
+Ready-to-copy pipeline examples (GitHub Actions, GitLab CI, plain shell) live in [`examples/ci/`](examples/ci/).
 
 ## Gardener Kubernetes clusters
 
-`cleura gardener` manages Cleura's Gardener-based Kubernetes. Most commands need
-a **region and project** — pass `--region`/`--project-id`, set
-`CLEURA_REGION`/`CLEURA_PROJECT_ID`, or store them in the profile at login.
+`cleura gardener` manages Cleura's Gardener-based Kubernetes.
+Most commands need a **region and project** — pass `--region`/`--project-id`, set `CLEURA_REGION`/`CLEURA_PROJECT_ID`, or store them in the profile at login.
 (Cloud profiles and `shoot check-name` are cloud-wide and need only a cloud.)
 
 Discover what's available (cloud-wide — no region/project needed):
@@ -184,25 +161,23 @@ cleura gardener shoot monitoring nodes prod wg-primary        # per-node CPU/mem
 cleura gardener shoot monitoring worker-group prod wg-primary # worker-group aggregate metrics
 ```
 
-Destructive operations (`enable-ha`, `ca rotate`, ...) ask for confirmation and
-refuse on a non-interactive terminal — pass `--yes` in CI. Every read command
-supports `-o json`/`-o yaml`.
+Destructive operations (`enable-ha`, `ca rotate`, ...)
+ask for confirmation and refuse on a non-interactive terminal — pass `--yes` in CI.
+Every read command supports `-o json`/`-o yaml`.
 
 ## Cleura account users
 
-`cleura user` manages the users of your **Cleura account** — the identities that
-log in to the Control Panel and this CLI. They are distinct from the OpenStack
-(Keystone) users that `cleura openstack user` manages. All of it needs the
-`users` privilege or account-admin rights; to see your own account without that
-privilege, use `cleura whoami`.
+`cleura user` manages the users of your **Cleura account** — the identities that log in to the Control Panel and this CLI.
+They are distinct from the OpenStack (Keystone) users that `cleura openstack user` manages.
+All of it needs the `users` privilege or account-admin rights; to see your own account without that privilege, use `cleura whoami`.
 
 ```sh
 cleura user list                          # everyone, with a privilege summary and 2FA status
 cleura user get johndoe                   # one user (by username or numeric ID), full breakdown
 ```
 
-Create a user. The password is read from a no-echo prompt, or from stdin when
-piped — never from a flag:
+Create a user.
+The password is read from a no-echo prompt, or from stdin when piped — never from a flag:
 
 ```sh
 cleura user create johndoe --email john.doe@example.org --first-name John --last-name Doe
@@ -219,8 +194,8 @@ cleura user edit ci-bot --ip-restriction 203.0.113.0/24    # replaces the whole 
 cleura user edit ci-bot --clear-ip-restrictions
 ```
 
-Delete is irreversible, confirms first, and needs `--yes` on a non-interactive
-terminal. The account you are logged in as cannot be deleted here:
+Delete is irreversible, confirms first, and needs `--yes` on a non-interactive terminal.
+The account you are logged in as cannot be deleted here:
 
 ```sh
 cleura user delete johndoe
@@ -229,9 +204,8 @@ cleura user delete 4763 --yes
 
 ### Privileges
 
-A new user starts with no access. Privileges are their own noun, because they
-come in two shapes: account-wide access to an *area*, or access to specific
-OpenStack *projects*.
+A new user starts with no access.
+Privileges are their own noun, because they come in two shapes: account-wide access to an *area*, or access to specific OpenStack *projects*.
 
 ```sh
 cleura user privilege list johndoe
@@ -243,9 +217,8 @@ invoice     read      account-wide
 openstack   project   team-alpha:read, team-beta:full
 ```
 
-Grant account-wide access to an area (`account`, `ai-gateway`, `application`,
-`invoice`, `monitoring`, `openstack`, `users`) with `--area`, and access to a
-single project with `--project-id`. The level is `full` or `read`:
+Grant account-wide access to an area (`account`, `ai-gateway`, `application`, `invoice`, `monitoring`, `openstack`, `users`) with `--area`, and access to a single project with `--project-id`.
+The level is `full` or `read`:
 
 ```sh
 cleura user privilege set johndoe --area invoice --level read
@@ -254,8 +227,7 @@ cleura user privilege set johndoe --project-id team-beta --level full
 ```
 
 Each project grant leaves the others alone, so repeat the command to add more.
-Setting an `--area` replaces whatever that area had, including its per-project
-grants, and the command says so when it does.
+Setting an `--area` replaces whatever that area had, including its per-project grants, and the command says so when it does.
 
 Remove access the same way:
 
@@ -264,9 +236,8 @@ cleura user privilege unset johndoe --project-id team-alpha   # one project
 cleura user privilege unset johndoe --area invoice            # the whole area
 ```
 
-`--project-id` takes a project ID or a name. **Project names are not unique
-across regions**, so a name matching more than one project is refused rather
-than guessed:
+`--project-id` takes a project ID or a name.
+**Project names are not unique across regions**, so a name matching more than one project is refused rather than guessed:
 
 ```
 Error: "team-alpha" matches 2 projects; qualify it as region/name or pass the ID:
@@ -274,9 +245,8 @@ Error: "team-alpha" matches 2 projects; qualify it as region/name or pass the ID
   sto2/team-alpha	aaaa1111…
 ```
 
-Use `sto2/team-alpha`, or the ID. For a project that is not in your own project
-list (the API offers no account-wide project listing), pass its ID together
-with `--domain-id`.
+Use `sto2/team-alpha`, or the ID.
+For a project that is not in your own project list (the API offers no account-wide project listing), pass its ID together with `--domain-id`.
 
 > [!NOTE]
 > The API has no privilege sub-resource: a privilege change is a read, a merge
@@ -290,9 +260,8 @@ with `--domain-id`.
 
 ## OpenStack identity (projects, users, roles)
 
-`cleura openstack` manages OpenStack (Keystone) identity — domains, projects,
-users, and their role assignments. OpenStack users are **distinct from Cleura
-account users** (`cleura user`): they authenticate against OpenStack itself.
+`cleura openstack` manages OpenStack (Keystone) identity — domains, projects, users, and their role assignments.
+OpenStack users are **distinct from Cleura account users** (`cleura user`): they authenticate against OpenStack itself.
 
 > [!NOTE]
 > **`cleura openstack` is not a general-purpose OpenStack client, and is not meant to
@@ -304,17 +273,16 @@ account users** (`cleura user`): they authenticate against OpenStack itself.
 > surface here is intentionally small.
 
 Almost every command is scoped to a **domain** and needs `--domain-id <domain-id>`.
-Cleura gives an account a domain per region, so you normally have several — the CLI
-auto-selects a domain only when the account has exactly one; otherwise `--domain-id` is
-required. The exceptions are `domain list` and `project list`, which take no
-`--domain-id` — use them to find the IDs:
+Cleura gives an account a domain per region, so you normally have several — the CLI auto-selects a domain only when the account has exactly one; otherwise `--domain-id` is required.
+The exceptions are `domain list` and `project list`, which take no `--domain-id` — use them to find the IDs:
 
 ```sh
 cleura openstack domain list                       # domains + IDs and their region/area — find the one you want
 cleura openstack project list                      # projects you can access, grouped by region
 ```
 
-Everything else takes `--domain-id <domain-id>`. Lists within a domain:
+Everything else takes `--domain-id <domain-id>`.
+Lists within a domain:
 
 ```sh
 cleura openstack user list --domain-id <domain-id>    # OpenStack users in the domain
@@ -329,8 +297,7 @@ cleura openstack project edit <project-id> --domain-id <domain-id> --name new-na
 cleura openstack project edit <project-id> --domain-id <domain-id> --disable                      # pseudo-delete (turn it off)
 ```
 
-Users — the new user's password is read from a no-echo prompt or piped stdin,
-never from a flag:
+Users — the new user's password is read from a no-echo prompt or piped stdin, never from a flag:
 
 ```sh
 cleura openstack user create alice --domain-id <domain-id>                          # prompts for the password (no echo)
@@ -338,8 +305,7 @@ printf '%s' "$PASSWORD" | cleura openstack user create svc --domain-id <domain-i
 cleura openstack user delete alice --domain-id <domain-id> --yes                    # by name or ID (--yes for CI)
 ```
 
-Role assignments — grant a user roles on a project (a role assignment is the
-user + project + role binding):
+Role assignments — grant a user roles on a project (a role assignment is the user + project + role binding):
 
 ```sh
 cleura openstack role assignment create --user alice --role member --project-id <project-id> --domain-id <domain-id>
@@ -348,17 +314,15 @@ cleura openstack role assignment list   --user alice --domain-id <domain-id>    
 cleura openstack role assignment delete --user alice --role member --project-id <project-id> --domain-id <domain-id>
 ```
 
-`--user` accepts a name or an ID and `--role` takes role names (both resolved for
-you); `--project-id` and `--domain-id` are IDs (from `project list` and `domain list`).
+`--user` accepts a name or an ID and `--role` takes role names (both resolved for you); `--project-id` and `--domain-id` are IDs (from `project list` and `domain list`).
 `user delete` confirms and refuses on a non-interactive terminal unless `--yes`.
 Every read command supports `-o json`/`-o yaml`.
 
 ## Configuration
 
 Settings are resolved with the precedence **flags > environment > profile > defaults**.
-Within each level an explicit API URL (`--api-url`, `CLEURA_API_URL`, `api_url`) wins
-over a named cloud (`--cloud`, `CLEURA_CLOUD`, `cloud`). `cleura login` records the
-endpoint it logged in to in the profile, together with the username and token.
+Within each level an explicit API URL (`--api-url`, `CLEURA_API_URL`, `api_url`) wins over a named cloud (`--cloud`, `CLEURA_CLOUD`, `cloud`).
+`cleura login` records the endpoint it logged in to in the profile, together with the username and token.
 
 Working with more than one cloud is a matter of profiles:
 
@@ -372,17 +336,13 @@ cleura config profile rename production prod         # rename (keeps the token; 
 cleura config profile delete compliant
 ```
 
-Logging in always makes that profile the current one; `config profile use`
-switches between already-logged-in profiles.
+Logging in always makes that profile the current one; `config profile use` switches between already-logged-in profiles.
 
-When in doubt about what a command will actually use, `cleura config view` shows the
-effective settings and the source of each value (flag, `$CLEURA_*` variable, profile,
-or default), and warns when an environment variable shadows a stored profile value.
+When in doubt about what a command will actually use, `cleura config view` shows the effective settings and the source of each value (flag, `$CLEURA_*` variable, profile, or default), and warns when an environment variable shadows a stored profile value.
 
 `CLEURA_PROFILE` selects a profile for scripted use without touching the config file.
 
-The config file lives at `$CLEURA_CONFIG`, or `$XDG_CONFIG_HOME/cleura/config.yaml`,
-or `~/.config/cleura/config.yaml`:
+The config file lives at `$CLEURA_CONFIG`, or `$XDG_CONFIG_HOME/cleura/config.yaml`, or `~/.config/cleura/config.yaml`:
 
 ```yaml
 current_profile: default
@@ -405,8 +365,7 @@ profiles:
 > [Tool integration](#tool-integration)), the stable JSON contract. (`cleura
 > config view` is a human diagnostic; its output shape is not a contract.)
 
-Environment variables (shared with the
-[Terraform provider](https://github.com/cleura/terraform-provider-cleura)):
+Environment variables (shared with the [Terraform provider](https://github.com/cleura/terraform-provider-cleura)):
 
 | Variable              | Purpose                                        |
 |-----------------------|------------------------------------------------|
@@ -420,17 +379,10 @@ Environment variables (shared with the
 | `CLEURA_PROFILE`      | Profile to use                                 |
 | `CLEURA_CONFIG`       | Config file path override (use an absolute path: relative paths resolve against each process's own working directory) |
 
-Global flags (on every command): `--profile`, `--cloud`, `--api-url`,
-`--quiet/-q` (suppress informational messages; stdout carries only data, so pipes
-stay clean), `--debug` (log HTTP exchanges to stderr with credentials redacted).
+Global flags (on every command): `--profile`, `--cloud`, `--api-url`, `--quiet/-q` (suppress informational messages; stdout carries only data, so pipes stay clean), `--debug` (log HTTP exchanges to stderr with credentials redacted).
 
-Scoped flags, offered only where they apply: `--output/-o` (table, json, yaml) on
-commands that render output; `--region` and `--project-id` on `gardener` commands
-(and on `cleura login`, which stores them in the profile); `--domain-id` on most
-`cleura openstack` commands (normally required — an account usually has several
-domains, one per region; auto-selected only when there is exactly one).
-Environment variables `CLEURA_REGION`/`CLEURA_PROJECT_ID` still apply everywhere
-they are relevant.
+Scoped flags, offered only where they apply: `--output/-o` (table, json, yaml) on commands that render output; `--region` and `--project-id` on `gardener` commands (and on `cleura login`, which stores them in the profile); `--domain-id` on most `cleura openstack` commands (normally required — an account usually has several domains, one per region; auto-selected only when there is exactly one).
+Environment variables `CLEURA_REGION`/`CLEURA_PROJECT_ID` still apply everywhere they are relevant.
 
 Profile values can be changed without re-logging in:
 
@@ -442,10 +394,8 @@ cleura config path                     # where the config file lives
 
 ## Tool integration
 
-`cleura config get-credentials` is the stable interface for tools that
-authenticate via the CLI (the Terraform provider's `cleura` credential
-source, scripts, anything else). It prints the effective credentials — resolved
-with the usual precedence — as one JSON object:
+`cleura config get-credentials` is the stable interface for tools that authenticate via the CLI (the Terraform provider's `cleura` credential source, scripts, anything else).
+It prints the effective credentials — resolved with the usual precedence — as one JSON object:
 
 ```sh
 $ cleura config get-credentials
@@ -464,27 +414,18 @@ $ cleura config get-credentials
 $ cleura config get-credentials | jq -r .token   # e.g. for curl scripts
 ```
 
-Exit codes are part of the contract: `0` credentials printed; `2` no usable
-credentials for the selected profile (a JSON `{"error": ...}` object is printed
-on stdout, so credential chains can fall through to their next source); any
-other exit is a malfunction. `--validate` verifies the token against the API
-first. Compatibility: fields are only added — never renamed or removed — while
-`version` is `1`; a breaking change bumps it, and consumers must check it.
+Exit codes are part of the contract: `0` credentials printed; `2` no usable credentials for the selected profile (a JSON `{"error": ...}` object is printed on stdout, so credential chains can fall through to their next source); any other exit is a malfunction.
+`--validate` verifies the token against the API first.
+Compatibility: fields are only added — never renamed or removed — while `version` is `1`; a breaking change bumps it, and consumers must check it.
 
-The `region`, `project_id`, `cloud` and `token_stored_at` fields are omitted
-when unset — in particular `cloud` is absent for a private cloud configured
-with only an `api_url` and no cloud name.
+The `region`, `project_id`, `cloud` and `token_stored_at` fields are omitted when unset — in particular `cloud` is absent for a private cloud configured with only an `api_url` and no cloud name.
 
-`config get-credentials` is the only versioned, stable JSON contract. Every
-other command's `-o json`/`-o yaml` output is for convenience: it mirrors the
-unversioned API plus a few CLI-computed fields and may change between releases,
-so don't build automation that depends on its exact shape.
+`config get-credentials` is the only versioned, stable JSON contract.
+Every other command's `-o json`/`-o yaml` output is for convenience: it mirrors the unversioned API plus a few CLI-computed fields and may change between releases, so don't build automation that depends on its exact shape.
 
 ## Command reference
 
-Every command and flag is documented in [`docs/reference/`](docs/reference/cleura.md),
-generated from the CLI's own help text (`make docs` regenerates it — the reference
-cannot drift from the binary).
+Every command and flag is documented in [`docs/reference/`](docs/reference/cleura.md), generated from the CLI's own help text (`make docs` regenerates it — the reference cannot drift from the binary).
 
 ## Shell completion
 
